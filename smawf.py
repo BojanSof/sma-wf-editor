@@ -226,58 +226,193 @@ class ImageData:
             provided. The first one has color 0x21AB, the next one 0x22CD.
         """
 
-        def rgb565_to_rgb888(rgb565: int) -> tuple[int, int, int]:
-            red = ((rgb565 >> 11) * 255 + 15) // 31
-            green = (((rgb565 >> 5) & 0x3F) * 255 + 31) // 63
-            blue = ((rgb565 & 0x1F) * 255 + 15) // 31
-            return (red, green, blue)
+        def decompress_line(line, is_rgba):
+            def rgb565_to_rgb888(rgb565: int) -> tuple[int, int, int]:
+                red = ((rgb565 >> 11) * 255 + 15) // 31
+                green = (((rgb565 >> 5) & 0x3F) * 255 + 31) // 63
+                blue = ((rgb565 & 0x1F) * 255 + 15) // 31
+                return (red, green, blue)
 
-        uncompressed_img_data = bytes()
-        for line_info in self.lines_info:
-            line_data = self.compressed_data[
-                line_info.line_offset : line_info.line_offset + line_info.line_size
-            ]
+            uncompressed_line = bytes()
             i = 0
-            while i < len(line_data):
-                prefix = line_data[i]
+            while i < len(line):
+                prefix = line[i]
                 same_val = prefix & 0x80
                 n = prefix & 0x7F
                 i += 1
                 if same_val:
-                    if self.is_rgba:
-                        alpha = line_data[i]
-                        rgb565 = (line_data[i + 1] << 8) | (line_data[i + 2])
+                    if is_rgba:
+                        alpha = line[i]
+                        rgb565 = (line[i + 1] << 8) | (line[i + 2])
                     else:
-                        rgb565 = (line_data[i] << 8) | (line_data[i + 1])
+                        rgb565 = (line[i] << 8) | (line[i + 1])
                     red, green, blue = rgb565_to_rgb888(rgb565)
                     pixel_data = (
                         red.to_bytes(1, "little")
                         + green.to_bytes(1, "little")
                         + blue.to_bytes(1, "little")
                     )
-                    if self.is_rgba:
+                    if is_rgba:
                         pixel_data += alpha.to_bytes(1, "little")
-                    uncompressed_img_data += n * pixel_data
-                    i += 3 if self.is_rgba else 2
+                    uncompressed_line += n * pixel_data
+                    i += 3 if is_rgba else 2
                 else:
                     for _ in range(n):
-                        if self.is_rgba:
-                            alpha = line_data[i]
-                            rgb565 = (line_data[i + 1] << 8) | (line_data[i + 2])
+                        if is_rgba:
+                            alpha = line[i]
+                            rgb565 = (line[i + 1] << 8) | (line[i + 2])
                         else:
-                            rgb565 = (line_data[i] << 8) | (line_data[i + 1])
+                            rgb565 = (line[i] << 8) | (line[i + 1])
                         red, green, blue = rgb565_to_rgb888(rgb565)
                         pixel_data = (
                             red.to_bytes(1, "little")
                             + green.to_bytes(1, "little")
                             + blue.to_bytes(1, "little")
                         )
-                        if self.is_rgba:
+                        if is_rgba:
                             pixel_data += alpha.to_bytes(1, "little")
-                        uncompressed_img_data += pixel_data
-                        i += 3 if self.is_rgba else 2
+                        uncompressed_line += pixel_data
+                        i += 3 if is_rgba else 2
+            return uncompressed_line
+
+        uncompressed_img_data = bytes()
+        for line_info in self.lines_info:
+            line_data = self.compressed_data[
+                line_info.line_offset : line_info.line_offset + line_info.line_size
+            ]
+            uncompressed_img_data += decompress_line(line_data, self.is_rgba)
         mode = "RGBA" if self.is_rgba else "RGB"
         return Image.frombytes(mode, (self.width, self.height), uncompressed_img_data)
+
+    @staticmethod
+    def compress(img: Image.Image):
+        """
+        Compression goes the other way around from the decompression.
+        We process each line of the image and perform RLE.
+        We keep track of the length of each compressed line, which also helps with
+        calculating the line offset.
+        """
+        is_rgba = img.mode == "RGBA"
+        width = img.width
+        height = img.height
+        pixels = img.load()
+
+        def compress_line(line, is_rgba, width):
+            # convert each line from RGB/RGBA to RGB565/ARGB565
+            def rgb888_to_rgb565(r: int, g: int, b: int) -> int:
+                rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+                return rgb565
+
+            b_per_pix = 4 if is_rgba else 3
+
+            if is_rgba:
+                pix_vals = [
+                    struct.Struct(">BH").pack(
+                        line[b_per_pix * i + 3],
+                        rgb888_to_rgb565(
+                            line[b_per_pix * i + 0],
+                            line[b_per_pix * i + 1],
+                            line[b_per_pix * i + 2],
+                        ),
+                    )
+                    for i in range(width)
+                ]
+            else:
+                pix_vals = [
+                    struct.Struct(">H").pack(
+                        rgb888_to_rgb565(
+                            line[b_per_pix * i + 0],
+                            line[b_per_pix * i + 1],
+                            line[b_per_pix * i + 2],
+                        )
+                    )
+                    for i in range(width)
+                ]
+            compressed_line = bytes()
+            count = 1
+            same_val = False
+            prev_val = pix_vals[0]
+            segment_vals = prev_val
+            b_per_val = 3 if is_rgba else 2
+            for i_val, val in enumerate(pix_vals[1:]):
+                if val == prev_val:
+                    if not same_val:
+                        if i_val > 0:
+                            # store previous different values segment
+                            segment_vals = segment_vals[:-b_per_val]
+                            count -= 1
+                            while count > 0:
+                                subsegment_count = min(0x7F, count)
+                                subsegment_vals = segment_vals[
+                                    : subsegment_count * b_per_val
+                                ]
+                                prefix = subsegment_count
+                                compressed_line += (
+                                    int.to_bytes(prefix, 1, "little") + subsegment_vals
+                                )
+                                segment_vals = segment_vals[
+                                    subsegment_count * b_per_val :
+                                ]
+                                count -= subsegment_count
+                            segment_vals = bytes()
+                        count = 1
+                        same_val = True
+                    count += 1
+                else:
+                    if same_val:
+                        # store previous same values segment
+                        while count > 0:
+                            subsegment_count = min(0x7F, count)
+                            prefix = 0x80 | subsegment_count
+                            pix_val = prev_val
+                            compressed_line += (
+                                int.to_bytes(prefix, 1, "little") + pix_val
+                            )
+                            count -= subsegment_count
+                        count = 1
+                        same_val = False
+                        segment_vals = bytes()
+                    else:
+                        count += 1
+                    segment_vals += val
+                prev_val = val
+
+            if same_val:
+                while count > 0:
+                    subsegment_count = min(0x7F, count)
+                    prefix = 0x80 | subsegment_count
+                    compressed_line += int.to_bytes(prefix, 1, "little") + prev_val
+                    count -= subsegment_count
+            else:
+                while count > 0:
+                    subsegment_count = min(0x7F, count)
+                    prefix = subsegment_count
+                    subsegment_vals = segment_vals[: subsegment_count * b_per_val]
+                    compressed_line += (
+                        int.to_bytes(prefix, 1, "little") + subsegment_vals
+                    )
+                    segment_vals = segment_vals[subsegment_count * b_per_val :]
+                    count -= subsegment_count
+            return compressed_line
+
+        compressed_lines = []
+        for i_line in range(height):
+            line = b"".join(
+                b"".join(int.to_bytes(p, 1, "little") for p in pixels[i, i_line])
+                for i in range(width)
+            )
+            compr_line = compress_line(line, is_rgba, width)
+            compressed_lines.append(compr_line)
+
+        lines_info = []
+        line_offset = ImageLineInfo.size * height
+        for line in compressed_lines:
+            lines_info.append(ImageLineInfo(line_offset, len(line)))
+            line_offset += len(line)
+        compressed_data = b"".join(bytes(li) for li in lines_info) + b"".join(
+            compressed_lines
+        )
+        return ImageData(lines_info, compressed_data, width, height, is_rgba)
 
 
 @dataclass(frozen=True)
