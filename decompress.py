@@ -22,5 +22,6 @@ if __name__ == "__main__":
         wf_data = f.read()
     wf = WatchFace.loads(wf_data)
     for i, img_data in enumerate(wf.imgs_data):
+        print("Extracting image {i:03d}.png")
         img = img_data.decompress()
-        img.save(output_dir / f"{i}.png")
+        img.save(output_dir / f"{i:03d}.png")

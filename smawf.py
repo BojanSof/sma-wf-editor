@@ -412,6 +412,8 @@ class ImageData:
         compressed_data = b"".join(bytes(li) for li in lines_info) + b"".join(
             compressed_lines
         )
+        # pad compressed data to length of 4
+        compressed_data += b"\x00" * (-len(compressed_data) % 4)
         return ImageData(lines_info, compressed_data, width, height, is_rgba)
 
 
