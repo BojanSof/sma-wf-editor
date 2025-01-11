@@ -9,8 +9,8 @@ from smawf import WatchFace, ImageData, BlockInfo, WatchFaceMetaData
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="SMA smart watches face compressor",
-        description="Compress the image resources and edit the given watch face file",
+        prog="SMA smart watches face edit script",
+        description="Compress the edited image resources and edit the given watch face file",
     )
     parser.add_argument("-i", "--input_file", type=pathlib.Path, required=True)
     parser.add_argument("-r", "--input_image_dir", type=pathlib.Path, required=True)
