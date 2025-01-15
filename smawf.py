@@ -1,7 +1,41 @@
-import argparse
 from dataclasses import dataclass
 import struct
 from PIL import Image
+from enum import IntEnum
+
+
+def rgb565_to_rgb888(rgb565: int) -> tuple[int, int, int]:
+    red = ((rgb565 >> 11) * 255 + 15) // 31
+    green = (((rgb565 >> 5) & 0x3F) * 255 + 31) // 63
+    blue = ((rgb565 & 0x1F) * 255 + 15) // 31
+    return (red, green, blue)
+
+
+def rgb888_to_rgb565(r: int, g: int, b: int) -> int:
+    rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+    return rgb565
+
+
+class BlockType(IntEnum):
+    Preview = 1
+    Background = 2
+    HoursArm = 131
+    HoursMinutes = 132
+    HoursSeconds = 133
+    DateDay = 135
+    DateMonth = 136
+    Hours = 137
+    Minutes = 138
+    Seconds = 139
+    AmPm = 140
+    Day = 141
+    Steps = 142
+    HeartRate = 143
+    Calories = 144
+    Distance = 145
+    Animation = 151
+    Battery = 152
+    DistanceLabel = 165
 
 
 @dataclass(frozen=True)
@@ -38,7 +72,7 @@ class BlockInfo:
     pos_x: int
     pos_y: int
     num_imgs: int
-    blocktype: int
+    blocktype: BlockType
     align: int
     compr: int
     cent_x: int
@@ -94,7 +128,7 @@ class BlockInfo:
             pos_x,
             pos_y,
             parts,
-            blocktype,
+            BlockType(blocktype),
             align,
             compr,
             cent_x,
@@ -124,13 +158,7 @@ class WatchFaceMetaData:
     def loads(data: bytes):
         header = Header.loads(data[: Header.size])
         block_info = [
-            BlockInfo.loads(
-                data[
-                    Header.size
-                    + i * BlockInfo.size : Header.size
-                    + (i + 1) * BlockInfo.size
-                ]
-            )
+            BlockInfo.loads(data[Header.size + i * BlockInfo.size : Header.size + (i + 1) * BlockInfo.size])
             for i in range(header.num_blocks)
         ]
         img_size_info = [
@@ -148,7 +176,7 @@ class WatchFaceMetaData:
 
 
 @dataclass(frozen=True)
-class ImageLineInfo:
+class ImageCompressedLineInfo:
     line_offset: int
     line_size: int
     size = 4
@@ -165,16 +193,16 @@ class ImageLineInfo:
 
     @staticmethod
     def loads(data: bytes):
-        assert len(data) == ImageLineInfo.size
+        assert len(data) == ImageCompressedLineInfo.size
         (data_int,) = struct.unpack("<I", data)
         line_offset = data_int & 0x001FFFFF
         line_size = (data_int & 0xFFE00000) >> 21
-        return ImageLineInfo(line_offset, line_size)
+        return ImageCompressedLineInfo(line_offset, line_size)
 
 
 @dataclass(frozen=True)
-class ImageData:
-    lines_info: list[ImageLineInfo]
+class ImageCompressedData:
+    lines_info: list[ImageCompressedLineInfo]
     compressed_data: bytes
     width: int
     height: int
@@ -188,18 +216,19 @@ class ImageData:
 
     @staticmethod
     def loads(data: bytes, width: int, height: int, is_rgba: bool):
-        lines_info_size = height * ImageLineInfo.size
+        lines_info_size = height * ImageCompressedLineInfo.size
         assert len(data) > lines_info_size
         lines_info = [
-            ImageLineInfo.loads(
-                data[i * ImageLineInfo.size : (i + 1) * ImageLineInfo.size]
+            ImageCompressedLineInfo.loads(
+                data[i * ImageCompressedLineInfo.size : (i + 1) * ImageCompressedLineInfo.size]
             )
-            for i in range(lines_info_size // ImageLineInfo.size)
+            for i in range(lines_info_size // ImageCompressedLineInfo.size)
         ]
-        return ImageData(lines_info, data, width, height, is_rgba)
+        return ImageCompressedData(lines_info, data, width, height, is_rgba)
 
     def decompress(self) -> Image.Image:
         """
+        Compression type is 0x04.
         Image is compressed using line-based run-length encoding (RLE).
         Image data starts with info for each line, containing the offset
         where the encoded line data lies, along with 1.5 bytes which
@@ -227,12 +256,6 @@ class ImageData:
         """
 
         def decompress_line(line, is_rgba):
-            def rgb565_to_rgb888(rgb565: int) -> tuple[int, int, int]:
-                red = ((rgb565 >> 11) * 255 + 15) // 31
-                green = (((rgb565 >> 5) & 0x3F) * 255 + 31) // 63
-                blue = ((rgb565 & 0x1F) * 255 + 15) // 31
-                return (red, green, blue)
-
             uncompressed_line = bytes()
             i = 0
             while i < len(line):
@@ -247,11 +270,7 @@ class ImageData:
                     else:
                         rgb565 = (line[i] << 8) | (line[i + 1])
                     red, green, blue = rgb565_to_rgb888(rgb565)
-                    pixel_data = (
-                        red.to_bytes(1, "little")
-                        + green.to_bytes(1, "little")
-                        + blue.to_bytes(1, "little")
-                    )
+                    pixel_data = red.to_bytes(1, "little") + green.to_bytes(1, "little") + blue.to_bytes(1, "little")
                     if is_rgba:
                         pixel_data += alpha.to_bytes(1, "little")
                     uncompressed_line += n * pixel_data
@@ -265,9 +284,7 @@ class ImageData:
                             rgb565 = (line[i] << 8) | (line[i + 1])
                         red, green, blue = rgb565_to_rgb888(rgb565)
                         pixel_data = (
-                            red.to_bytes(1, "little")
-                            + green.to_bytes(1, "little")
-                            + blue.to_bytes(1, "little")
+                            red.to_bytes(1, "little") + green.to_bytes(1, "little") + blue.to_bytes(1, "little")
                         )
                         if is_rgba:
                             pixel_data += alpha.to_bytes(1, "little")
@@ -277,9 +294,7 @@ class ImageData:
 
         uncompressed_img_data = bytes()
         for line_info in self.lines_info:
-            line_data = self.compressed_data[
-                line_info.line_offset : line_info.line_offset + line_info.line_size
-            ]
+            line_data = self.compressed_data[line_info.line_offset : line_info.line_offset + line_info.line_size]
             uncompressed_img_data += decompress_line(line_data, self.is_rgba)
         mode = "RGBA" if self.is_rgba else "RGB"
         return Image.frombytes(mode, (self.width, self.height), uncompressed_img_data)
@@ -299,10 +314,6 @@ class ImageData:
 
         def compress_line(line, is_rgba, width):
             # convert each line from RGB/RGBA to RGB565/ARGB565
-            def rgb888_to_rgb565(r: int, g: int, b: int) -> int:
-                rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-                return rgb565
-
             b_per_pix = 4 if is_rgba else 3
 
             if is_rgba:
@@ -343,16 +354,10 @@ class ImageData:
                             count -= 1
                             while count > 0:
                                 subsegment_count = min(0x7F, count)
-                                subsegment_vals = segment_vals[
-                                    : subsegment_count * b_per_val
-                                ]
+                                subsegment_vals = segment_vals[: subsegment_count * b_per_val]
                                 prefix = subsegment_count
-                                compressed_line += (
-                                    int.to_bytes(prefix, 1, "little") + subsegment_vals
-                                )
-                                segment_vals = segment_vals[
-                                    subsegment_count * b_per_val :
-                                ]
+                                compressed_line += int.to_bytes(prefix, 1, "little") + subsegment_vals
+                                segment_vals = segment_vals[subsegment_count * b_per_val :]
                                 count -= subsegment_count
                             segment_vals = bytes()
                         count = 1
@@ -365,9 +370,7 @@ class ImageData:
                             subsegment_count = min(0x7F, count)
                             prefix = 0x80 | subsegment_count
                             pix_val = prev_val
-                            compressed_line += (
-                                int.to_bytes(prefix, 1, "little") + pix_val
-                            )
+                            compressed_line += int.to_bytes(prefix, 1, "little") + pix_val
                             count -= subsegment_count
                         count = 1
                         same_val = False
@@ -388,33 +391,109 @@ class ImageData:
                     subsegment_count = min(0x7F, count)
                     prefix = subsegment_count
                     subsegment_vals = segment_vals[: subsegment_count * b_per_val]
-                    compressed_line += (
-                        int.to_bytes(prefix, 1, "little") + subsegment_vals
-                    )
+                    compressed_line += int.to_bytes(prefix, 1, "little") + subsegment_vals
                     segment_vals = segment_vals[subsegment_count * b_per_val :]
                     count -= subsegment_count
             return compressed_line
 
         compressed_lines = []
         for i_line in range(height):
-            line = b"".join(
-                b"".join(int.to_bytes(p, 1, "little") for p in pixels[i, i_line])
-                for i in range(width)
-            )
+            line = b"".join(b"".join(int.to_bytes(p, 1, "little") for p in pixels[i, i_line]) for i in range(width))
             compr_line = compress_line(line, is_rgba, width)
             compressed_lines.append(compr_line)
 
         lines_info = []
-        line_offset = ImageLineInfo.size * height
+        line_offset = ImageCompressedLineInfo.size * height
         for line in compressed_lines:
-            lines_info.append(ImageLineInfo(line_offset, len(line)))
+            lines_info.append(ImageCompressedLineInfo(line_offset, len(line)))
             line_offset += len(line)
-        compressed_data = b"".join(bytes(li) for li in lines_info) + b"".join(
-            compressed_lines
-        )
+        compressed_data = b"".join(bytes(li) for li in lines_info) + b"".join(compressed_lines)
         # pad compressed data to length of 4
         compressed_data += b"\x00" * (-len(compressed_data) % 4)
-        return ImageData(lines_info, compressed_data, width, height, is_rgba)
+        return ImageCompressedData(lines_info, compressed_data, width, height, is_rgba)
+
+
+@dataclass(frozen=True)
+class ImageData:
+    data: bytes
+    compression: int
+    width: int
+    height: int
+    is_rgba: bool
+
+    def __post_init__(self):
+        object.__setattr__(self, "_bytes", self.data)
+
+    def __bytes__(self):
+        return self._bytes
+
+    @staticmethod
+    def loads(data: bytes, compression: int, width: int, height: int, is_rgba: bool):
+        if compression != 0x00 and compression != 0x04:
+            raise ValueError("Unsupported compression method")
+        return ImageData(data, compression, width, height, is_rgba)
+
+    def unpack(self) -> Image.Image:
+        if self.compression == 0x00:
+            mode = "RGBA" if self.is_rgba else "RGB"
+            b_per_pix = 3 if self.is_rgba else 2
+            # when compression is 0, data is stored RGB565 + optional Alpha
+            if self.is_rgba:
+                pixels_data = b"".join(
+                    struct.Struct("<BBBB").pack(
+                        *rgb565_to_rgb888((self.data[i + 1] << 8) | (self.data[i + 2])),
+                        self.data[i],
+                    )
+                    for i in range(0, len(self.data), b_per_pix)
+                )
+            else:
+                pixels_data = b"".join(
+                    struct.Struct("<BBB").pack(
+                        *rgb565_to_rgb888((self.data[i] << 8) | (self.data[i + 1])),
+                    )
+                    for i in range(0, len(self.data), b_per_pix)
+                )
+            return Image.frombytes(mode, (self.width, self.height), pixels_data)
+        elif self.compression == 0x04:
+            return ImageCompressedData.loads(self.data, self.width, self.height, self.is_rgba).decompress()
+
+    @staticmethod
+    def pack(img: Image.Image, compression: int):
+        if compression != 0x00 and compression != 0x04:
+            raise ValueError("Unsupported compression method")
+        if compression == 0x00:
+            width = img.width
+            height = img.height
+            is_rgba = img.mode == "RGBA"
+            pixels = img.load()
+            if is_rgba:
+                pixels_data = b"".join(
+                    struct.Struct(">BH").pack(
+                        pixels[col, row][3],
+                        rgb888_to_rgb565(
+                            pixels[col, row][0],
+                            pixels[col, row][1],
+                            pixels[col, row][2],
+                        ),
+                    )
+                    for row in range(height)
+                    for col in range(width)
+                )
+            else:
+                pixels_data = b"".join(
+                    struct.Struct(">H").pack(
+                        rgb888_to_rgb565(
+                            pixels[col, row][0],
+                            pixels[col, row][1],
+                            pixels[col, row][2],
+                        ),
+                    )
+                    for row in range(height)
+                    for col in range(width)
+                )
+            return ImageData(pixels_data, compression, width, height, is_rgba)
+        elif compression == 0x04:
+            return ImageCompressedData.compress(img)
 
 
 @dataclass(frozen=True)
@@ -444,6 +523,7 @@ class WatchFace:
                 img_size = meta_data.imgs_size_info[img_id]
                 img_data = ImageData.loads(
                     data[offset : offset + img_size],
+                    bi.compr,
                     bi.width,
                     bi.height,
                     bi.blocktype & 0x80 != 0,

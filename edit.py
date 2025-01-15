@@ -30,7 +30,7 @@ if __name__ == "__main__":
     for img_name in sorted(os.listdir(args.input_image_dir)):
         img = Image.open(os.path.join(args.input_image_dir, img_name))
         print(f"Processing {img_name}")
-        img_data = ImageData.compress(img)
+        img_data = ImageData.pack(img, 0x04)
         imgs_data.append(img_data)
     # update meta data
     print("Adjusting watch face meta data")
