@@ -19,23 +19,30 @@ def rgb888_to_rgb565(r: int, g: int, b: int) -> int:
 class BlockType(IntEnum):
     Preview = 1
     Background = 2
-    HoursArm = 131
-    HoursMinutes = 132
-    HoursSeconds = 133
-    DateDay = 135
-    DateMonth = 136
-    Hours = 137
-    Minutes = 138
-    Seconds = 139
-    AmPm = 140
-    Day = 141
-    Steps = 142
-    HeartRate = 143
-    Calories = 144
-    Distance = 145
-    Animation = 151
-    Battery = 152
-    DistanceLabel = 165
+    HoursArm = 3
+    HoursMinutes = 4
+    HoursSeconds = 5
+    Year = 6
+    Month = 7
+    Day = 8
+    Hours = 9
+    Minutes = 10
+    Seconds = 11
+    AmPm = 12
+    WeekDay = 13
+    Steps = 14
+    HeartRate = 15
+    Calories = 16
+    Distance = 17
+    Animation = 23
+    Battery = 24
+    DistanceLabel = 37
+
+
+class BlockHorizontalAlignment(IntEnum):
+    Left = 9
+    Center = 10
+    Right = 12
 
 
 @dataclass(frozen=True)
@@ -72,8 +79,9 @@ class BlockInfo:
     pos_x: int
     pos_y: int
     num_imgs: int
+    is_rgba: bool
     blocktype: BlockType
-    align: int
+    align: BlockHorizontalAlignment
     compr: int
     cent_x: int
     cent_y: int
@@ -92,7 +100,7 @@ class BlockInfo:
                 self.pos_x,
                 self.pos_y,
                 self.num_imgs,
-                self.blocktype,
+                self.is_rgba << 7 | self.blocktype,
                 self.align,
                 self.compr,
                 self.cent_x,
@@ -120,6 +128,9 @@ class BlockInfo:
             cent_x,
             cent_y,
         ) = BlockInfo._struct.unpack(data)
+        is_rgba = blocktype & 0x80 != 0
+        blocktype = BlockType(blocktype & 0x7F)
+        align = BlockHorizontalAlignment(align)
         return BlockInfo(
             img_addr,
             picidx,
@@ -128,7 +139,8 @@ class BlockInfo:
             pos_x,
             pos_y,
             parts,
-            BlockType(blocktype),
+            is_rgba,
+            blocktype,
             align,
             compr,
             cent_x,
@@ -438,21 +450,30 @@ class ImageData:
             mode = "RGBA" if self.is_rgba else "RGB"
             b_per_pix = 3 if self.is_rgba else 2
             # when compression is 0, data is stored RGB565 + optional Alpha
-            if self.is_rgba:
-                pixels_data = b"".join(
-                    struct.Struct("<BBBB").pack(
-                        *rgb565_to_rgb888((self.data[i + 1] << 8) | (self.data[i + 2])),
-                        self.data[i],
+            # each line must have length multiple of 4, which means
+            # each line may be padded if width is not multiple of 4
+            line_length = self.width * b_per_pix
+            pad_size = -line_length % 4
+            line_length += pad_size
+            num_lines = self.height
+            pixels_data = b""
+            for i_line in range(num_lines):
+                line = self.data[i_line * line_length : (i_line + 1) * line_length - pad_size]
+                if self.is_rgba:
+                    pixels_data += b"".join(
+                        struct.Struct("<BBBB").pack(
+                            *rgb565_to_rgb888((line[i + 1] << 8) | (line[i + 2])),
+                            line[i],
+                        )
+                        for i in range(0, len(line), b_per_pix)
                     )
-                    for i in range(0, len(self.data), b_per_pix)
-                )
-            else:
-                pixels_data = b"".join(
-                    struct.Struct("<BBB").pack(
-                        *rgb565_to_rgb888((self.data[i] << 8) | (self.data[i + 1])),
+                else:
+                    pixels_data += b"".join(
+                        struct.Struct("<BBB").pack(
+                            *rgb565_to_rgb888((line[i] << 8) | (line[i + 1])),
+                        )
+                        for i in range(0, len(line), b_per_pix)
                     )
-                    for i in range(0, len(self.data), b_per_pix)
-                )
             return Image.frombytes(mode, (self.width, self.height), pixels_data)
         elif self.compression == 0x04:
             return ImageCompressedData.loads(self.data, self.width, self.height, self.is_rgba).decompress()
@@ -466,31 +487,39 @@ class ImageData:
             height = img.height
             is_rgba = img.mode == "RGBA"
             pixels = img.load()
-            if is_rgba:
-                pixels_data = b"".join(
-                    struct.Struct(">BH").pack(
-                        pixels[col, row][3],
-                        rgb888_to_rgb565(
-                            pixels[col, row][0],
-                            pixels[col, row][1],
-                            pixels[col, row][2],
-                        ),
+
+            b_per_pix = 3 if is_rgba else 2
+            line_length = width * b_per_pix
+            pad_size = -line_length % 4
+            line_length += pad_size
+            num_lines = height
+            pixels_data = b""
+            for i_line in range(num_lines):
+                if is_rgba:
+                    line = b"".join(
+                        struct.Struct(">BH").pack(
+                            pixels[col, i_line][3],
+                            rgb888_to_rgb565(
+                                pixels[col, i_line][0],
+                                pixels[col, i_line][1],
+                                pixels[col, i_line][2],
+                            ),
+                        )
+                        for col in range(width)
                     )
-                    for row in range(height)
-                    for col in range(width)
-                )
-            else:
-                pixels_data = b"".join(
-                    struct.Struct(">H").pack(
-                        rgb888_to_rgb565(
-                            pixels[col, row][0],
-                            pixels[col, row][1],
-                            pixels[col, row][2],
-                        ),
+                else:
+                    line = b"".join(
+                        struct.Struct(">H").pack(
+                            rgb888_to_rgb565(
+                                pixels[col, i_line][0],
+                                pixels[col, i_line][1],
+                                pixels[col, i_line][2],
+                            ),
+                        )
+                        for col in range(width)
                     )
-                    for row in range(height)
-                    for col in range(width)
-                )
+                line += b"\x00" * pad_size
+                pixels_data += line
             return ImageData(pixels_data, compression, width, height, is_rgba)
         elif compression == 0x04:
             return ImageCompressedData.compress(img)
@@ -521,13 +550,7 @@ class WatchFace:
             num_imgs = bi.num_imgs
             for img_id in range(start_id, start_id + num_imgs):
                 img_size = meta_data.imgs_size_info[img_id]
-                img_data = ImageData.loads(
-                    data[offset : offset + img_size],
-                    bi.compr,
-                    bi.width,
-                    bi.height,
-                    bi.blocktype & 0x80 != 0,
-                )
+                img_data = ImageData.loads(data[offset : offset + img_size], bi.compr, bi.width, bi.height, bi.is_rgba)
                 imgs_data.append(img_data)
                 offset += img_size
         return WatchFace(meta_data, imgs_data)
