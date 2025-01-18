@@ -36,10 +36,16 @@ class BlockType(IntEnum):
     Distance = 17
     Animation = 23
     Battery = 24
+    HeartRateStrip = 33
     DistanceLabel = 37
+    HoursDigitTens = 39
+    HoursDigitOnes = 40
+    MinutesDigitTens = 41
+    MinutesDigitOnes = 42
 
 
 class BlockHorizontalAlignment(IntEnum):
+    NotSpecified = 0
     Left = 9
     Center = 10
     Right = 12
