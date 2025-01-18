@@ -1,0 +1,19 @@
+[project]
+name = "sma-wf-editor"
+version = "0.1.0"
+description = "Watch face editor for SMA smart watches"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pillow>=11.1.0",
+    "pyside6>=6.8.1.1",
+    "ruff>=0.9.1",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 80

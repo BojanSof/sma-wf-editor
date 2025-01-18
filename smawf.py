@@ -20,8 +20,8 @@ class BlockType(IntEnum):
     Preview = 1
     Background = 2
     HoursArm = 3
-    HoursMinutes = 4
-    HoursSeconds = 5
+    MinutesArm = 4
+    SecondsArm = 5
     Year = 6
     Month = 7
     Day = 8
@@ -34,8 +34,10 @@ class BlockType(IntEnum):
     HeartRate = 15
     Calories = 16
     Distance = 17
+    Unknown1 = 22
     Animation = 23
     Battery = 24
+    StepsStrip = 30
     HeartRateStrip = 33
     DistanceLabel = 37
     HoursDigitTens = 39
