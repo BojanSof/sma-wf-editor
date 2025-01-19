@@ -1,42 +1,33 @@
-from enum import Enum
 import math
 
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsItem, QGraphicsEllipseItem
 from PySide6.QtGui import QColor, QPen, QPainterPath
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal, QObject
 
 
-class WatchFaceImage(QGraphicsPixmapItem):
-    class HorizontalAlignment(Enum):
-        Left = 0
-        Center = 1
-        Right = 2
+class WatchFaceImage(QGraphicsPixmapItem, QObject):
+    positionChanged = Signal(float, float)
+    sizeChanged = Signal(int, int)
+    rotationChanged = Signal(float)
 
     def __init__(
         self,
         pixmap,
         x=0,
         y=0,
+        origin_x=0,
+        origin_y=0,
         resizable=True,
         movable=True,
         selectable=True,
         rotatable=True,
-        rot_x=0,
-        rot_y=0,
-        h_align=HorizontalAlignment.Left,
     ):
-        super().__init__(pixmap)
+        QGraphicsPixmapItem.__init__(self, pixmap)
+        QObject.__init__(self)
         self.original_pixmap = pixmap
         self.setAcceptHoverEvents(True)
-        self.h_align = h_align
-        offset_x = 0
-        if self.h_align == WatchFaceImage.HorizontalAlignment.Center:
-            offset_x = pixmap.width() // 2
-        elif self.h_align == WatchFaceImage.HorizontalAlignment.Right:
-            offset_x = pixmap.width()
-        self.setOffset(-offset_x, 0)
+        self.setOffset(-origin_x, -origin_y)
         self.setPos(x, y)
-        self.setTransformOriginPoint(rot_x, rot_y)
         self.resizing = False
         self.resize_handle_size = 10
         self.resize_handle = None
@@ -51,7 +42,8 @@ class WatchFaceImage(QGraphicsPixmapItem):
 
         self.setFlag(
             QGraphicsPixmapItem.GraphicsItemFlag.ItemIsMovable
-            | QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges,
+            | QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+            | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges,
             movable,
         )
         self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsSelectable, selectable)
@@ -135,6 +127,7 @@ class WatchFaceImage(QGraphicsPixmapItem):
                 if self.rotate_enabled:
                     self.create_rotate_origin()
                     self.rotate_origin.setVisible(True)
+                self.sizeChanged.emit(new_width, new_height)
         elif self.rotating and event.buttons() & Qt.MouseButton.LeftButton:
             current_pos = event.scenePos()
             center_pos = self.mapToScene(self.boundingRect().center())
@@ -151,6 +144,7 @@ class WatchFaceImage(QGraphicsPixmapItem):
             if self.resize_enabled:
                 self.create_resize_handle()
                 self.resize_handle.setVisible(True)
+            self.rotationChanged.emit(self.rotation())
         else:
             super().mouseMoveEvent(event)
 
@@ -173,19 +167,22 @@ class WatchFaceImage(QGraphicsPixmapItem):
                 self.resize_handle.setVisible(value)
             if self.rotate_enabled:
                 self.rotate_origin.setVisible(value)
-        elif change == QGraphicsItem.ItemPositionChange and self.scene():
+        elif change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self.scene():
             rect = self.scene().sceneRect()
-            width = self.boundingRect().width()
-            height = self.boundingRect().height()
+            left = abs(self.boundingRect().left())
+            top = abs(self.boundingRect().top())
+            right = abs(self.boundingRect().right())
+            bottom = abs(self.boundingRect().bottom())
             # Keep the item inside the scene rect
-            if value.x() < rect.left():
-                value.setX(rect.left())
-            elif value.x() + width > rect.right():
-                value.setX(rect.right() - width)
-            if value.y() < rect.top():
-                value.setY(rect.top())
-            elif value.y() + height > rect.bottom():
-                value.setY(rect.bottom() - height)
+            if value.x() - left < rect.left():
+                value.setX(rect.left() + left)
+            elif value.x() + right > rect.right():
+                value.setX(rect.right() - right)
+            if value.y() - top < rect.top():
+                value.setY(rect.top() + top)
+            elif value.y() + bottom > rect.bottom():
+                value.setY(rect.bottom() - bottom)
+            self.positionChanged.emit(value.x(), value.y())
             return value
         return super().itemChange(change, value)
 

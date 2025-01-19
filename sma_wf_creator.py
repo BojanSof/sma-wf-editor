@@ -8,7 +8,7 @@ from wf_creator_window import Ui_MainWindow as SmaWfCreatorWindow
 from wf_image import WatchFaceImage
 from wf_layer import WatchFaceLayer
 
-from smawf import BlockHorizontalAlignment, BlockType, WatchFace
+from smawf import BlockHorizontalAlignment, WatchFace, arm_block_types
 
 
 class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
@@ -31,13 +31,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.view.setScene(self.scene)
 
         self.image_items = []
-        # for i in range(12):
-        #     item = WatchFaceLayer(name=f"Layer {i}", image_path=f"watch_faces/10011_blue/{i:03d}.png")
-        #     self.lwWfLayers.addItem(item)
-        #     self.lwWfLayers.setItemWidget(item, item.widget)
-        #     wf_image = WatchFaceImage(item.get_image())
-        #     self.scene.addItem(wf_image)
-        #     self.image_items.append(wf_image)
+        self.layer_items = []
 
         self.lwWfLayers.itemSelectionChanged.connect(self.on_layer_selection_changed)
         self.scene.selectionChanged.connect(self.on_image_selection_changed)
@@ -46,6 +40,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.actionLoadWf.triggered.connect(self.load_watch_face)
         self.actionSaveWf.triggered.connect(self.save_watch_face)
         self.actionExit.triggered.connect(self.close)
+        self.actionPreview.triggered.connect(self.preview_watch_face)
 
     def load_watch_face(self):
         self.lwWfLayers.clear()
@@ -58,35 +53,50 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
             self.watch_face = WatchFace.loads(wf_data)
             self.image_items.clear()
             for i, bi in enumerate(self.watch_face.meta_data.blocks_info):
-                print(f"Block {i}: {bi}")
+                # print(f"Block {i}: {bi}")
                 img_data = self.watch_face.imgs_data[bi.img_id].unpack()
-                layer = WatchFaceLayer(name=f"Layer {i}", image=QPixmap.fromImage(ImageQt(img_data)))
+                layer = WatchFaceLayer(
+                    bi, image=QPixmap.fromImage(ImageQt(img_data)), max_x=self.width, max_y=self.height
+                )
                 self.lwWfLayers.addItem(layer)
                 self.lwWfLayers.setItemWidget(layer, layer.widget)
-                h_align_map = {
-                    BlockHorizontalAlignment.Left: WatchFaceImage.HorizontalAlignment.Left,
-                    BlockHorizontalAlignment.Center: WatchFaceImage.HorizontalAlignment.Center,
-                    BlockHorizontalAlignment.Right: WatchFaceImage.HorizontalAlignment.Right,
-                }
-                h_align = h_align_map[bi.align] if bi.align in h_align_map else WatchFaceImage.HorizontalAlignment.Left
-                if bi.blocktype in [BlockType.HoursArm, BlockType.MinutesArm, BlockType.SecondsArm]:
-                    x = bi.pos_x - bi.width + bi.cent_y
-                    y = bi.pos_y - bi.height + bi.cent_x
+                if bi.blocktype in arm_block_types:
+                    origin_x = bi.width - bi.cent_y
+                    origin_y = bi.height - bi.cent_x
+                    x = bi.pos_x
+                    y = bi.pos_y
                     rotate_enabled = True
-                    rot_x = bi.width - bi.cent_y
-                    rot_y = bi.height - bi.cent_x
                 else:
+                    origin_x = 0
+                    origin_y = 0
                     x = bi.pos_x
                     y = bi.pos_y
                     rotate_enabled = False
-                    rot_x = 0
-                    rot_y = 0
-                img = WatchFaceImage(layer.get_image(), x=x, y=y, h_align=h_align, rotatable=rotate_enabled, rot_x=rot_x, rot_y=rot_y)
+                if bi.align == BlockHorizontalAlignment.Center:
+                    origin_x = bi.width // 2
+                elif bi.align == BlockHorizontalAlignment.Right:
+                    origin_x = bi.width
+                img = WatchFaceImage(
+                    layer.get_image(),
+                    x=x,
+                    y=y,
+                    origin_x=origin_x,
+                    origin_y=origin_y,
+                    rotatable=rotate_enabled,
+                )
+                img.positionChanged.connect(layer.set_position)
+                img.sizeChanged.connect(layer.set_size)
+                img.rotationChanged.connect(layer.set_rotation)
                 self.image_items.append(img)
                 self.scene.addItem(img)
+                layer.image_item = img
+                self.layer_items.append(layer)
 
     def save_watch_face(self):
         print("Save Watch Face")
+
+    def preview_watch_face(self):
+        print("Preview Watch Face")
 
     def on_layer_selection_changed(self):
         selected_items = self.lwWfLayers.selectedItems()

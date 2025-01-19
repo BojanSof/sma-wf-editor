@@ -105,7 +105,14 @@
     <addaction name="actionSaveWf"/>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionPreview"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuTools"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoadWf">
@@ -126,6 +133,16 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionExport_Preview">
+   <property name="text">
+    <string>Export Preview</string>
+   </property>
+  </action>
+  <action name="actionPreview">
+   <property name="text">
+    <string>Create Preview</string>
    </property>
   </action>
  </widget>

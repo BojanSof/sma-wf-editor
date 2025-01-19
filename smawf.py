@@ -45,6 +45,9 @@ class BlockType(IntEnum):
     MinutesDigitTens = 41
     MinutesDigitOnes = 42
 
+    def __str__(self):
+        return self.name
+
 
 class BlockHorizontalAlignment(IntEnum):
     NotSpecified = 0
@@ -53,7 +56,7 @@ class BlockHorizontalAlignment(IntEnum):
     Right = 12
 
 
-@dataclass(frozen=True)
+@dataclass
 class Header:
     num_img_info_size: int
     num_blocks: int
@@ -78,7 +81,7 @@ class Header:
         return Header(num_img_size_info, num_blocks, dnk)
 
 
-@dataclass(frozen=True)
+@dataclass
 class BlockInfo:
     img_offset: int
     img_id: int
@@ -156,7 +159,7 @@ class BlockInfo:
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class WatchFaceMetaData:
     header: Header
     blocks_info: list[BlockInfo]
@@ -195,7 +198,7 @@ class WatchFaceMetaData:
         return WatchFaceMetaData(header, block_info, img_size_info)
 
 
-@dataclass(frozen=True)
+@dataclass
 class ImageCompressedLineInfo:
     line_offset: int
     line_size: int
@@ -220,7 +223,7 @@ class ImageCompressedLineInfo:
         return ImageCompressedLineInfo(line_offset, line_size)
 
 
-@dataclass(frozen=True)
+@dataclass
 class ImageCompressedData:
     lines_info: list[ImageCompressedLineInfo]
     compressed_data: bytes
@@ -433,7 +436,7 @@ class ImageCompressedData:
         return ImageCompressedData(lines_info, compressed_data, width, height, is_rgba)
 
 
-@dataclass(frozen=True)
+@dataclass
 class ImageData:
     data: bytes
     compression: int
@@ -533,7 +536,7 @@ class ImageData:
             return ImageCompressedData.compress(img)
 
 
-@dataclass(frozen=True)
+@dataclass
 class WatchFace:
     meta_data: WatchFaceMetaData
     imgs_data: list[ImageData]
@@ -562,3 +565,5 @@ class WatchFace:
                 imgs_data.append(img_data)
                 offset += img_size
         return WatchFace(meta_data, imgs_data)
+
+arm_block_types = [BlockType.HoursArm, BlockType.MinutesArm, BlockType.SecondsArm]
