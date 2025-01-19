@@ -72,10 +72,16 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                 if bi.blocktype in [BlockType.HoursArm, BlockType.MinutesArm, BlockType.SecondsArm]:
                     x = bi.pos_x - bi.width + bi.cent_y
                     y = bi.pos_y - bi.height + bi.cent_x
+                    rotate_enabled = True
+                    rot_x = bi.width - bi.cent_y
+                    rot_y = bi.height - bi.cent_x
                 else:
                     x = bi.pos_x
                     y = bi.pos_y
-                img = WatchFaceImage(layer.get_image(), x=x, y=y, h_align=h_align)
+                    rotate_enabled = False
+                    rot_x = 0
+                    rot_y = 0
+                img = WatchFaceImage(layer.get_image(), x=x, y=y, h_align=h_align, rotatable=rotate_enabled, rot_x=rot_x, rot_y=rot_y)
                 self.image_items.append(img)
                 self.scene.addItem(img)
 

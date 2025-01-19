@@ -1,5 +1,7 @@
 from enum import Enum
-from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsItem
+import math
+
+from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsItem, QGraphicsEllipseItem
 from PySide6.QtGui import QColor, QPen, QPainterPath
 from PySide6.QtCore import Qt
 
@@ -11,7 +13,17 @@ class WatchFaceImage(QGraphicsPixmapItem):
         Right = 2
 
     def __init__(
-        self, pixmap, x=0, y=0, resizable=True, movable=True, selectable=True, h_align=HorizontalAlignment.Left
+        self,
+        pixmap,
+        x=0,
+        y=0,
+        resizable=True,
+        movable=True,
+        selectable=True,
+        rotatable=True,
+        rot_x=0,
+        rot_y=0,
+        h_align=HorizontalAlignment.Left,
     ):
         super().__init__(pixmap)
         self.original_pixmap = pixmap
@@ -24,12 +36,19 @@ class WatchFaceImage(QGraphicsPixmapItem):
             offset_x = pixmap.width()
         self.setOffset(-offset_x, 0)
         self.setPos(x, y)
+        self.setTransformOriginPoint(rot_x, rot_y)
         self.resizing = False
         self.resize_handle_size = 10
         self.resize_handle = None
+        self.rotating = False
+        self.rotate_origin_size = 10
+        self.rotate_origin = None
+
         self.resize_enabled = resizable
         self.move_enabled = movable
         self.select_enabled = selectable
+        self.rotate_enabled = rotatable
+
         self.setFlag(
             QGraphicsPixmapItem.GraphicsItemFlag.ItemIsMovable
             | QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges,
@@ -39,6 +58,9 @@ class WatchFaceImage(QGraphicsPixmapItem):
         if self.resize_enabled:
             self.create_resize_handle()
             self.resize_handle.setVisible(False)
+        if self.rotate_enabled:
+            self.create_rotate_origin()
+            self.rotate_origin.setVisible(False)
 
     def create_resize_handle(self):
         if self.resize_handle:
@@ -50,8 +72,17 @@ class WatchFaceImage(QGraphicsPixmapItem):
             rect.bottom() - self.resize_handle_size,
         )
         self.resize_handle = QGraphicsRectItem(x, y, self.resize_handle_size, self.resize_handle_size, self)
-        self.resize_handle.setBrush(QColor(255, 0, 0, 150))
+        self.resize_handle.setBrush(QColor(255, 0, 0, 200))
         self.resize_handle.setPen(QPen(Qt.PenStyle.NoPen))
+
+    def create_rotate_origin(self):
+        if self.rotate_origin:
+            self.scene().removeItem(self.rotate_origin)
+        x = self.transformOriginPoint().x() - self.rotate_origin_size // 2
+        y = self.transformOriginPoint().y() - self.rotate_origin_size // 2
+        self.rotate_origin = QGraphicsEllipseItem(x, y, self.rotate_origin_size, self.rotate_origin_size, self)
+        self.rotate_origin.setBrush(QColor(0, 255, 0, 200))
+        self.rotate_origin.setPen(QPen(Qt.PenStyle.NoPen))
 
     def hoverMoveEvent(self, event):
         if self.resize_enabled:
@@ -67,8 +98,22 @@ class WatchFaceImage(QGraphicsPixmapItem):
                 self.setCursor(Qt.CursorShape.SizeFDiagCursor)
             else:
                 self.resizing = False
-                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+                self.setCursor(Qt.CursorShape.OpenHandCursor)
+        if self.rotate_enabled:
+            if self.rotating and event.button() == Qt.LeftButton:
+                self.setCursor(Qt.CursorShape.CrossCursor)
+                self.initial_rotation_pos = event.scenePos()
         super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if self.rotate_enabled:
+            if event.button() == Qt.LeftButton:
+                self.rotating = not self.rotating
+                if self.rotating:
+                    self.setCursor(Qt.CursorShape.CrossCursor)
+                else:
+                    self.setCursor(Qt.CursorShape.OpenHandCursor)
+        super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
         if self.resizing:
@@ -87,10 +132,30 @@ class WatchFaceImage(QGraphicsPixmapItem):
                 self.setPixmap(self.original_pixmap.scaled(new_width, new_height, Qt.KeepAspectRatio))
                 self.create_resize_handle()
                 self.resize_handle.setVisible(True)
+                if self.rotate_enabled:
+                    self.create_rotate_origin()
+                    self.rotate_origin.setVisible(True)
+        elif self.rotating and event.buttons() & Qt.MouseButton.LeftButton:
+            current_pos = event.scenePos()
+            center_pos = self.mapToScene(self.boundingRect().center())
+            angle = math.degrees(
+                math.atan2(current_pos.y() - center_pos.y(), current_pos.x() - center_pos.x())
+                - math.atan2(
+                    self.initial_rotation_pos.y() - center_pos.y(), self.initial_rotation_pos.x() - center_pos.x()
+                )
+            )
+            self.setRotation(self.rotation() + angle)
+            self.initial_rotation_pos = current_pos
+            self.create_rotate_origin()
+            self.rotate_origin.setVisible(True)
+            if self.resize_enabled:
+                self.create_resize_handle()
+                self.resize_handle.setVisible(True)
         else:
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        self.rotating = False
         self.resizing = False
         self.setCursor(Qt.CursorShape.OpenHandCursor)
         super().mouseReleaseEvent(event)
@@ -99,10 +164,15 @@ class WatchFaceImage(QGraphicsPixmapItem):
         super().setSelected(selected)
         if self.resize_enabled:
             self.resize_handle.setVisible(selected)
+        if self.rotate_enabled:
+            self.rotate_origin.setVisible(selected)
 
     def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemSelectedChange and self.resize_enabled:
-            self.resize_handle.setVisible(value)
+        if change == QGraphicsItem.ItemSelectedChange:
+            if self.resize_enabled:
+                self.resize_handle.setVisible(value)
+            if self.rotate_enabled:
+                self.rotate_origin.setVisible(value)
         elif change == QGraphicsItem.ItemPositionChange and self.scene():
             rect = self.scene().sceneRect()
             width = self.boundingRect().width()
