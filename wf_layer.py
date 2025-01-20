@@ -44,7 +44,7 @@ class IconOnlyDelegate(QStyledItemDelegate):
 
 
 class WatchFaceLayer(QListWidgetItem):
-    def __init__(self, block_info, images, max_x=1000, max_y=1000, parent=None):
+    def __init__(self, block_info, images, max_x=1000, max_y=1000, rot_x=0, rot_y=0, parent=None):
         super().__init__(parent)
 
         self.block_info = block_info
@@ -67,13 +67,13 @@ class WatchFaceLayer(QListWidgetItem):
         self.width_spinbox.setRange(0, max_x)
         self.width_spinbox.setValue(block_info.width)
         self.width_spinbox.setMaximumWidth(70)
-        self.width_spinbox.valueChanged.connect(self.update_info)
+        self.width_spinbox.valueChanged.connect(self.update_width)
 
         self.height_spinbox = QSpinBox()
         self.height_spinbox.setRange(0, max_y)
         self.height_spinbox.setValue(block_info.height)
         self.height_spinbox.setMaximumWidth(70)
-        self.height_spinbox.valueChanged.connect(self.update_info)
+        self.height_spinbox.valueChanged.connect(self.update_height)
 
         self.x_spinbox = QSpinBox()
         self.x_spinbox.setRange(0, max_x)
@@ -95,11 +95,13 @@ class WatchFaceLayer(QListWidgetItem):
 
         self.rot_x_spinbox = QSpinBox()
         self.rot_x_spinbox.setRange(0, max_x)
+        self.rot_x_spinbox.setValue(rot_x)
         self.rot_x_spinbox.setMaximumWidth(70)
         self.rot_x_spinbox.valueChanged.connect(self.update_info)
 
         self.rot_y_spinbox = QSpinBox()
         self.rot_y_spinbox.setRange(0, max_y)
+        self.rot_y_spinbox.setValue(rot_y)
         self.rot_y_spinbox.setMaximumWidth(70)
         self.rot_y_spinbox.valueChanged.connect(self.update_info)
 
@@ -207,7 +209,9 @@ class WatchFaceLayer(QListWidgetItem):
         if current_index >= 0 and current_index < len(self.images):
             self.set_image(self.images[current_index])
             if hasattr(self, "image_item"):
-                self.image_item.setPixmap(self.images[current_index])
+                self.image_item.setPixmap(
+                    self.images[current_index].scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
+                )
 
     def load_image(self):
         file_name, _ = QFileDialog.getOpenFileName(self.widget, "Open Image File", "", "Images (*.png)")
@@ -220,6 +224,25 @@ class WatchFaceLayer(QListWidgetItem):
 
     def get_image(self):
         return self.pixmap
+
+    def update_width(self):
+        if hasattr(self, "image_item"):
+            aspect_ratio = self.image_item.pixmap().height() / self.image_item.pixmap().width()
+            new_width = self.width_spinbox.value()
+            new_height = round(new_width * aspect_ratio)
+            self.height_spinbox.setValue(new_height)
+            self.height_spinbox.blockSignals(False)
+        self.update_info()
+
+    def update_height(self):
+        if hasattr(self, "image_item"):
+            aspect_ratio = self.image_item.pixmap().width() / self.image_item.pixmap().height()
+            new_height = self.height_spinbox.value()
+            new_width = round(new_height * aspect_ratio)
+            self.width_spinbox.blockSignals(True)
+            self.width_spinbox.setValue(new_width)
+            self.width_spinbox.blockSignals(False)
+        self.update_info()
 
     def update_info(self):
         self.block_info.blocktype = BlockType[self.type_field.currentText()]

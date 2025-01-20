@@ -58,9 +58,6 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                     QPixmap.fromImage(ImageQt(self.watch_face.imgs_data[bi.img_id + i_img].unpack()))
                     for i_img in range(bi.num_imgs)
                 ]
-                layer = WatchFaceLayer(bi, images=images, max_x=self.width, max_y=self.height)
-                self.lwWfLayers.addItem(layer)
-                self.lwWfLayers.setItemWidget(layer, layer.widget)
                 if bi.blocktype in arm_block_types:
                     origin_x = bi.width - bi.cent_y
                     origin_y = bi.height - bi.cent_x
@@ -77,6 +74,11 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                     origin_x = bi.width // 2
                 elif bi.align == BlockHorizontalAlignment.Right:
                     origin_x = bi.width
+                layer = WatchFaceLayer(
+                    bi, images=images, max_x=self.width, max_y=self.height, rot_x=origin_x, rot_y=origin_y
+                )
+                self.lwWfLayers.addItem(layer)
+                self.lwWfLayers.setItemWidget(layer, layer.widget)
                 img = WatchFaceImage(
                     layer.get_image(),
                     x=x,
