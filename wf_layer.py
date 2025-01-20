@@ -13,22 +13,50 @@ from PySide6.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QLineEdit,
+    QStyledItemDelegate,
+    QStyle,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QIcon
 from smawf import BlockHorizontalAlignment, BlockType, arm_block_types
 
 
+class IconOnlyDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        if option.state & QStyle.State_Selected or option.state & QStyle.State_MouseOver:
+            painter.save()
+            painter.setBrush(option.palette.highlight())
+            painter.setPen(Qt.NoPen)
+            painter.drawRect(option.rect)
+            painter.restore()
+
+        icon = index.data(Qt.DecorationRole)
+        if icon:
+            rect = option.rect
+            size = option.decorationSize
+            icon_rect = rect.adjusted(
+                (rect.width() - size.width()) // 2,
+                (rect.height() - size.height()) // 2,
+                -(rect.width() - size.width()) // 2,
+                -(rect.height() - size.height()) // 2,
+            )
+            icon.paint(painter, icon_rect, alignment=Qt.AlignCenter)
+
+
 class WatchFaceLayer(QListWidgetItem):
-    def __init__(self, block_info, image=None, max_x=1000, max_y=1000, parent=None):
+    def __init__(self, block_info, images, max_x=1000, max_y=1000, parent=None):
         super().__init__(parent)
 
         self.block_info = block_info
+        self.images = images
 
         self.widget = QWidget()
-        self.image_label = QLabel()
-        self.image_label.setFixedSize(50, 50)
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setStyleSheet("border: 1px solid black;")
+        self.image_combobox = QComboBox()
+        self.image_combobox.setFixedSize(100, 100)
+        self.image_combobox.setIconSize(QSize(70, 70))
+        self.image_combobox.setItemDelegate(IconOnlyDelegate(self.image_combobox))
+        self.update_image_combobox()
+        self.image_combobox.currentIndexChanged.connect(self.update_image)
 
         self.type_field = QComboBox()
         self.type_field.addItems([str(t) for t in BlockType])
@@ -109,7 +137,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.load_button.clicked.connect(self.load_image)
 
         preview_type_layout = QHBoxLayout()
-        preview_type_layout.addWidget(self.image_label)
+        preview_type_layout.addWidget(self.image_combobox)
         preview_type_layout.addWidget(self.type_field)
 
         options_layout = QGridLayout()
@@ -164,8 +192,22 @@ class WatchFaceLayer(QListWidgetItem):
         for rot_element in self.rotation_elements:
             rot_element.setVisible(rot_elements_visible)
 
-        if image:
-            self.set_image(image)
+        self.pixmap = None
+        if len(images) > 0:
+            self.set_image(images[0])
+
+    def update_image_combobox(self):
+        self.image_combobox.clear()
+        for i, img in enumerate(self.images):
+            icon = QIcon(img)
+            self.image_combobox.addItem(icon, "")
+
+    def update_image(self):
+        current_index = self.image_combobox.currentIndex()
+        if current_index >= 0 and current_index < len(self.images):
+            self.set_image(self.images[current_index])
+            if hasattr(self, "image_item"):
+                self.image_item.setPixmap(self.images[current_index])
 
     def load_image(self):
         file_name, _ = QFileDialog.getOpenFileName(self.widget, "Open Image File", "", "Images (*.png)")
@@ -174,7 +216,7 @@ class WatchFaceLayer(QListWidgetItem):
 
     def set_image(self, image):
         self.pixmap = image
-        self.image_label.setPixmap(self.pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
+        self.image_combobox.setItemIcon(self.image_combobox.currentIndex(), QIcon(self.pixmap))
 
     def get_image(self):
         return self.pixmap
@@ -209,7 +251,7 @@ class WatchFaceLayer(QListWidgetItem):
 
     def set_rotation(self, rotation):
         self.rotation_spinbox.setValue(rotation)
-    
+
     def set_max_coordinates(self, max_x, max_y):
         self.width_spinbox.setRange(0, max_x)
         self.height_spinbox.setRange(0, max_y)

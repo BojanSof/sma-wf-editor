@@ -54,10 +54,11 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
             self.image_items.clear()
             for i, bi in enumerate(self.watch_face.meta_data.blocks_info):
                 # print(f"Block {i}: {bi}")
-                img_data = self.watch_face.imgs_data[bi.img_id].unpack()
-                layer = WatchFaceLayer(
-                    bi, image=QPixmap.fromImage(ImageQt(img_data)), max_x=self.width, max_y=self.height
-                )
+                images = [
+                    QPixmap.fromImage(ImageQt(self.watch_face.imgs_data[bi.img_id + i_img].unpack()))
+                    for i_img in range(bi.num_imgs)
+                ]
+                layer = WatchFaceLayer(bi, images=images, max_x=self.width, max_y=self.height)
                 self.lwWfLayers.addItem(layer)
                 self.lwWfLayers.setItemWidget(layer, layer.widget)
                 if bi.blocktype in arm_block_types:
