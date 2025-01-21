@@ -75,15 +75,22 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
         self.rotate_origin = QGraphicsEllipseItem(x, y, self.rotate_origin_size, self.rotate_origin_size, self)
         self.rotate_origin.setBrush(QColor(0, 255, 0, 200))
         self.rotate_origin.setPen(QPen(Qt.PenStyle.NoPen))
-    
+
     def setPixmap(self, pixmap):
+        old_width = self.pixmap().width()
+        old_height = self.pixmap().height()
+        new_width = pixmap.width()
+        new_height = pixmap.height()
         super().setPixmap(pixmap)
+        scale_x = new_width / old_width
+        scale_y = new_height / old_height
+        self.setOffset(self.offset().x() * scale_x, self.offset().y() * scale_y)
         self.update_transform_handles()
-    
+
     def setRotation(self, angle):
         super().setRotation(angle)
         self.update_transform_handles()
-    
+
     def update_transform_handles(self):
         if self.resize_enabled:
             visible = self.resize_handle.isVisible()
@@ -93,7 +100,7 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
             visible = self.rotate_origin.isVisible()
             self.create_rotate_origin()
             self.rotate_origin.setVisible(visible)
-    
+
     def hoverMoveEvent(self, event):
         if self.resize_enabled:
             if self.resize_handle.contains(event.pos()):
