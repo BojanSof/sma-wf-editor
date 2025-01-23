@@ -111,6 +111,9 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
     def mousePressEvent(self, event):
         if self.resize_enabled:
             if self.resize_handle.contains(event.pos()):
+                self.initial_resize_pos = event.scenePos()
+                self.initial_width = self.pixmap().width()
+                self.initial_height = self.pixmap().height()
                 self.resizing = True
                 self.setCursor(Qt.CursorShape.SizeFDiagCursor)
             else:
@@ -134,8 +137,9 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
 
     def mouseMoveEvent(self, event):
         if self.resizing:
-            new_width = event.pos().x()
-            new_height = event.pos().y()
+            delta = event.scenePos() - self.initial_resize_pos
+            new_width = self.initial_width + delta.x()
+            new_height = self.initial_height + delta.y()
             scene_rect = self.scene().sceneRect()
             item_rect = self.mapToScene(self.boundingRect()).boundingRect()
 
@@ -144,7 +148,6 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
                 new_width = scene_rect.right() - item_rect.left()
             if item_rect.top() + new_height > scene_rect.bottom():
                 new_height = scene_rect.bottom() - item_rect.top()
-
             if new_width > self.resize_handle_size and new_height > self.resize_handle_size:
                 self.setPixmap(self.original_pixmap.scaled(new_width, new_height, Qt.KeepAspectRatio))
                 self.sizeChanged.emit(new_width, new_height)
