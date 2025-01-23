@@ -19,8 +19,8 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
 from PySide6.QtWidgets import (QApplication, QComboBox, QGraphicsView, QGridLayout,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QListWidget, QListWidgetItem, QMainWindow, QMenu,
-    QMenuBar, QSizePolicy, QSpacerItem, QStatusBar,
-    QVBoxLayout, QWidget)
+    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
+    QStatusBar, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -47,12 +47,32 @@ class Ui_MainWindow(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.gbLayers = QGroupBox(self.centralwidget)
         self.gbLayers.setObjectName(u"gbLayers")
-        self.horizontalLayout = QHBoxLayout(self.gbLayers)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.verticalLayout_2 = QVBoxLayout(self.gbLayers)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.lwWfLayers = QListWidget(self.gbLayers)
         self.lwWfLayers.setObjectName(u"lwWfLayers")
 
-        self.horizontalLayout.addWidget(self.lwWfLayers)
+        self.verticalLayout_2.addWidget(self.lwWfLayers)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.btnAddLayer = QPushButton(self.gbLayers)
+        self.btnAddLayer.setObjectName(u"btnAddLayer")
+
+        self.horizontalLayout.addWidget(self.btnAddLayer)
+
+        self.btnRemoveLayer = QPushButton(self.gbLayers)
+        self.btnRemoveLayer.setObjectName(u"btnRemoveLayer")
+
+        self.horizontalLayout.addWidget(self.btnRemoveLayer)
+
+        self.btnRemoveAllLayers = QPushButton(self.gbLayers)
+        self.btnRemoveAllLayers.setObjectName(u"btnRemoveAllLayers")
+
+        self.horizontalLayout.addWidget(self.btnRemoveAllLayers)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
 
 
         self.verticalLayout.addWidget(self.gbLayers)
@@ -140,6 +160,9 @@ class Ui_MainWindow(object):
         self.actionExport_Preview.setText(QCoreApplication.translate("MainWindow", u"Export Preview", None))
         self.actionPreview.setText(QCoreApplication.translate("MainWindow", u"Create Preview", None))
         self.gbLayers.setTitle(QCoreApplication.translate("MainWindow", u"Layers", None))
+        self.btnAddLayer.setText(QCoreApplication.translate("MainWindow", u"+ Add Layer", None))
+        self.btnRemoveLayer.setText(QCoreApplication.translate("MainWindow", u"- Remove Layer", None))
+        self.btnRemoveAllLayers.setText(QCoreApplication.translate("MainWindow", u"Remove All Layers", None))
         self.gbParams.setTitle(QCoreApplication.translate("MainWindow", u"Parameters", None))
         self.lblDevice.setText(QCoreApplication.translate("MainWindow", u"Device", None))
         self.lblWidth.setText(QCoreApplication.translate("MainWindow", u"Width", None))

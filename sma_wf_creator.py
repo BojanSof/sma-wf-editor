@@ -8,7 +8,7 @@ from wf_creator_window import Ui_MainWindow as SmaWfCreatorWindow
 from wf_image import WatchFaceImage
 from wf_layer import WatchFaceLayer
 
-from smawf import BlockHorizontalAlignment, WatchFace, arm_block_types
+from smawf import BlockHorizontalAlignment, BlockType, BlockInfo, WatchFace, arm_block_types
 
 
 class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
@@ -37,15 +37,58 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.scene.selectionChanged.connect(self.on_image_selection_changed)
 
     def init_actions(self):
+        self.btnAddLayer.clicked.connect(self.add_layer)
+        self.btnRemoveLayer.clicked.connect(self.remove_layer)
+        self.btnRemoveAllLayers.clicked.connect(self.remove_all_layers)
         self.actionLoadWf.triggered.connect(self.load_watch_face)
         self.actionSaveWf.triggered.connect(self.save_watch_face)
         self.actionExit.triggered.connect(self.close)
         self.actionPreview.triggered.connect(self.preview_watch_face)
+    
+    def add_layer(self):
+        block_info = BlockInfo(
+            0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0, 0, 0
+        )
+        self.create_layer(block_info, [], 0, 0, 0, 0, False)
 
-    def load_watch_face(self):
+    def remove_layer(self):
+        selected_items = self.lwWfLayers.selectedItems()
+        if not selected_items:
+            return
+        for item in selected_items:
+            row = self.lwWfLayers.row(item)
+            self.lwWfLayers.takeItem(row)
+            image_item = self.image_items.pop(row)
+            self.scene.removeItem(image_item)
+            self.layer_items.pop(row)
+    
+    def remove_all_layers(self):
         self.lwWfLayers.clear()
         self.image_items.clear()
         self.scene.clear()
+    
+    def create_layer(self, block_info, images, x, y, origin_x, origin_y, rotatable):
+        layer = WatchFaceLayer(block_info, images, self.width, self.height, origin_x, origin_y)
+        self.lwWfLayers.addItem(layer)
+        self.lwWfLayers.setItemWidget(layer, layer.widget)
+        img = WatchFaceImage(
+            layer.get_image(),
+            x=x,
+            y=y,
+            origin_x=origin_x,
+            origin_y=origin_y,
+            rotatable=rotatable,
+        )
+        img.positionChanged.connect(layer.set_position)
+        img.sizeChanged.connect(layer.set_size)
+        img.rotationChanged.connect(layer.set_rotation)
+        self.image_items.append(img)
+        self.scene.addItem(img)
+        layer.image_item = img
+        self.layer_items.append(layer)
+
+    def load_watch_face(self):
+        self.remove_all_layers()
         file_name, _ = QFileDialog.getOpenFileName(self, "Open Watch Face File", "", "Bin Files (*.bin)")
         if file_name:
             with open(file_name, "rb") as f:
@@ -74,26 +117,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                     origin_x = bi.width // 2
                 elif bi.align == BlockHorizontalAlignment.Right:
                     origin_x = bi.width
-                layer = WatchFaceLayer(
-                    bi, images=images, max_x=self.width, max_y=self.height, rot_x=origin_x, rot_y=origin_y
-                )
-                self.lwWfLayers.addItem(layer)
-                self.lwWfLayers.setItemWidget(layer, layer.widget)
-                img = WatchFaceImage(
-                    layer.get_image(),
-                    x=x,
-                    y=y,
-                    origin_x=origin_x,
-                    origin_y=origin_y,
-                    rotatable=rotate_enabled,
-                )
-                img.positionChanged.connect(layer.set_position)
-                img.sizeChanged.connect(layer.set_size)
-                img.rotationChanged.connect(layer.set_rotation)
-                self.image_items.append(img)
-                self.scene.addItem(img)
-                layer.image_item = img
-                self.layer_items.append(layer)
+                self.create_layer(bi, images, x, y, origin_x, origin_y, rotate_enabled)
 
     def save_watch_face(self):
         print("Save Watch Face")

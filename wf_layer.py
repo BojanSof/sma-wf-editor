@@ -15,9 +15,10 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QStyledItemDelegate,
     QStyle,
+    QMessageBox,
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 from smawf import BlockHorizontalAlignment, BlockType, arm_block_types
 
 
@@ -135,7 +136,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.rgba_checkbox.setChecked(block_info.is_rgba)
         self.rgba_checkbox.stateChanged.connect(self.update_info)
 
-        self.load_button = QPushButton("...")
+        self.load_button = QPushButton("Load Images")
         self.load_button.clicked.connect(self.load_image)
 
         preview_type_layout = QHBoxLayout()
@@ -209,14 +210,32 @@ class WatchFaceLayer(QListWidgetItem):
         if current_index >= 0 and current_index < len(self.images):
             self.set_image(self.images[current_index])
             if hasattr(self, "image_item"):
-                self.image_item.setPixmap(
+                self.image_item.setNewPixmap(
                     self.images[current_index].scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
                 )
 
     def load_image(self):
-        file_name, _ = QFileDialog.getOpenFileName(self.widget, "Open Image File", "", "Images (*.png)")
-        if file_name:
-            self.set_image(file_name)
+        file_names, _ = QFileDialog.getOpenFileNames(self.widget, "Open Image File", "", "Images (*.png)")
+        if file_names:
+            self.images.clear()
+            images = [QPixmap(file_name) for file_name in file_names]
+            if not all(img.width() == images[0].width() and img.height() == images[0].height() for img in images):
+                QMessageBox.critical(
+                    self, "Image size mismatch", "All images must have the same width and height", QMessageBox.Ok
+                )
+                return
+            for file_name in file_names:
+                self.images.append(QPixmap(file_name))
+            self.width_spinbox.blockSignals(True)
+            self.height_spinbox.blockSignals(True)
+            self.width_spinbox.setValue(images[0].width())
+            self.height_spinbox.setValue(images[0].height())
+            self.width_spinbox.blockSignals(False)
+            self.height_spinbox.blockSignals(False)
+            self.update_image_combobox()
+            self.update_info()
+            self.update_image()
+            self.set_image(self.images[0])
 
     def set_image(self, image):
         self.pixmap = image
@@ -226,7 +245,7 @@ class WatchFaceLayer(QListWidgetItem):
         return self.pixmap
 
     def update_width(self):
-        if hasattr(self, "image_item"):
+        if hasattr(self, "image_item") and not self.image_item.pixmap().isNull():
             aspect_ratio = self.image_item.pixmap().height() / self.image_item.pixmap().width()
             new_width = self.width_spinbox.value()
             new_height = round(new_width * aspect_ratio)
@@ -235,7 +254,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.update_info()
 
     def update_height(self):
-        if hasattr(self, "image_item"):
+        if hasattr(self, "image_item") and self.image_item.pixmap() is not None:
             aspect_ratio = self.image_item.pixmap().width() / self.image_item.pixmap().height()
             new_height = self.height_spinbox.value()
             new_width = round(new_height * aspect_ratio)
@@ -257,12 +276,14 @@ class WatchFaceLayer(QListWidgetItem):
         self.block_info.align = self.reverse_align_map[self.align_combobox.currentText()]
         self.block_info.compr = 0 if self.compression_combobox.currentIndex() == 0 else 4
         self.block_info.is_rgba = self.rgba_checkbox.isChecked()
-        if hasattr(self, "image_item"):
-            self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
-            self.image_item.setPixmap(
-                self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
-            )
-            self.image_item.setRotation(self.rotation_spinbox.value())
+        self.block_info.num_imgs = len(self.images)
+        if self.pixmap is not None:
+            if hasattr(self, "image_item"):
+                self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
+                self.image_item.setPixmap(
+                    self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
+                )
+                self.image_item.setRotation(self.rotation_spinbox.value())
 
     def set_position(self, x, y):
         self.x_spinbox.setValue(x)

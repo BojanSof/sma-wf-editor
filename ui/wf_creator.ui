@@ -22,9 +22,34 @@
         <property name="title">
          <string>Layers</string>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
           <widget class="QListWidget" name="lwWfLayers"/>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QPushButton" name="btnAddLayer">
+             <property name="text">
+              <string>+ Add Layer</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnRemoveLayer">
+             <property name="text">
+              <string>- Remove Layer</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnRemoveAllLayers">
+             <property name="text">
+              <string>Remove All Layers</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>

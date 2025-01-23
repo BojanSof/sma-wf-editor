@@ -77,14 +77,22 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
         self.rotate_origin.setPen(QPen(Qt.PenStyle.NoPen))
 
     def setPixmap(self, pixmap):
-        old_width = self.pixmap().width()
-        old_height = self.pixmap().height()
-        new_width = pixmap.width()
-        new_height = pixmap.height()
+        if self.pixmap().isNull():
+            super().setPixmap(pixmap)
+        else:
+            old_width = self.pixmap().width()
+            old_height = self.pixmap().height()
+            new_width = pixmap.width()
+            new_height = pixmap.height()
+            super().setPixmap(pixmap)
+            scale_x = new_width / old_width
+            scale_y = new_height / old_height
+            self.setOffset(self.offset().x() * scale_x, self.offset().y() * scale_y)
+        self.update_transform_handles()
+    
+    def setNewPixmap(self, pixmap):
+        self.original_pixmap = pixmap
         super().setPixmap(pixmap)
-        scale_x = new_width / old_width
-        scale_y = new_height / old_height
-        self.setOffset(self.offset().x() * scale_x, self.offset().y() * scale_y)
         self.update_transform_handles()
 
     def setRotation(self, angle):
