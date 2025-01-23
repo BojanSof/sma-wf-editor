@@ -64,13 +64,13 @@ class WatchFaceLayer(QListWidgetItem):
         self.type_field.currentIndexChanged.connect(self.update_info)
 
         self.width_spinbox = QSpinBox()
-        self.width_spinbox.setRange(0, max_x)
+        self.width_spinbox.setRange(10, max_x)
         self.width_spinbox.setValue(block_info.width)
         self.width_spinbox.setMaximumWidth(70)
         self.width_spinbox.valueChanged.connect(self.update_width)
 
         self.height_spinbox = QSpinBox()
-        self.height_spinbox.setRange(0, max_y)
+        self.height_spinbox.setRange(10, max_y)
         self.height_spinbox.setValue(block_info.height)
         self.height_spinbox.setMaximumWidth(70)
         self.height_spinbox.valueChanged.connect(self.update_height)
