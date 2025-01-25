@@ -114,8 +114,8 @@ class BlockInfo:
                 self.is_rgba << 7 | self.blocktype,
                 self.align,
                 self.compr,
-                self.cent_x,
                 self.cent_y,
+                self.cent_x,
             ),
         )
 
@@ -136,8 +136,8 @@ class BlockInfo:
             blocktype,
             align,
             compr,
-            cent_x,
             cent_y,
+            cent_x,
         ) = BlockInfo._struct.unpack(data)
         is_rgba = blocktype & 0x80 != 0
         blocktype = BlockType(blocktype & 0x7F)
@@ -566,4 +566,20 @@ class WatchFace:
                 offset += img_size
         return WatchFace(meta_data, imgs_data)
 
-arm_block_types = [BlockType.HoursArm, BlockType.MinutesArm, BlockType.SecondsArm]
+
+def get_arm_block_types():
+    return [BlockType.HoursArm, BlockType.MinutesArm, BlockType.SecondsArm]
+
+
+def get_origin_point(block_info: BlockInfo):
+    origin_x = 0
+    origin_y = 0
+    if block_info.blocktype in get_arm_block_types():
+        origin_x = block_info.width - block_info.cent_x
+        origin_y = block_info.height - block_info.cent_y
+    else:
+        if block_info.align == BlockHorizontalAlignment.Center:
+            origin_x = block_info.width // 2
+        elif block_info.align == BlockHorizontalAlignment.Right:
+            origin_x = block_info.width
+    return origin_x, origin_y

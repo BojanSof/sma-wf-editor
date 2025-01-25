@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
 from wf_image import WatchFaceImage
-from smawf import BlockHorizontalAlignment, BlockType, BlockInfo, arm_block_types
+from smawf import BlockHorizontalAlignment, BlockType, BlockInfo, get_arm_block_types, get_origin_point
 
 
 class IconOnlyDelegate(QStyledItemDelegate):
@@ -53,8 +53,6 @@ class WatchFaceLayer(QListWidgetItem):
         images: list[QPixmap],
         max_x=1000,
         max_y=1000,
-        rot_x=0,
-        rot_y=0,
         parent=None,
     ):
         super().__init__(parent)
@@ -105,6 +103,9 @@ class WatchFaceLayer(QListWidgetItem):
         self.rotation_spinbox.setMaximumWidth(70)
         self.rotation_spinbox.setWrapping(True)
         self.rotation_spinbox.valueChanged.connect(self.update_info)
+
+        rot_x = block_info.cent_x if block_info.blocktype in get_arm_block_types() else 0
+        rot_y = block_info.cent_y if block_info.blocktype in get_arm_block_types() else 0
 
         self.rot_x_spinbox = QSpinBox()
         self.rot_x_spinbox.setRange(0, max_x)
@@ -203,7 +204,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.widget.setLayout(main_layout)
         self.setSizeHint(self.widget.sizeHint())
 
-        rot_elements_visible = block_info.blocktype in arm_block_types
+        rot_elements_visible = block_info.blocktype in get_arm_block_types()
         for rot_element in self.rotation_elements:
             rot_element.setVisible(rot_elements_visible)
 
@@ -272,7 +273,7 @@ class WatchFaceLayer(QListWidgetItem):
 
     def update_info(self):
         self.block_info.blocktype = BlockType[self.type_field.currentText()]
-        is_arm_block = self.block_info.blocktype in arm_block_types
+        is_arm_block = self.block_info.blocktype in get_arm_block_types()
         for rot_element in self.rotation_elements:
             rot_element.setVisible(is_arm_block)
         self.image_item.setRotatable(is_arm_block)
@@ -288,10 +289,14 @@ class WatchFaceLayer(QListWidgetItem):
         self.block_info.pos_y = self.y_spinbox.value()
         self.reverse_align_map = {v: k for k, v in self.align_map.items()}
         self.block_info.align = self.reverse_align_map[self.align_combobox.currentText()]
+        self.block_info.cent_x = self.rot_x_spinbox.value()
+        self.block_info.cent_y = self.rot_y_spinbox.value()
         self.block_info.compr = 0 if self.compression_combobox.currentIndex() == 0 else 4
         self.block_info.is_rgba = self.rgba_checkbox.isChecked()
         self.block_info.num_imgs = len(self.images)
         if self.pixmap is not None:
+            origin_x, origin_y = get_origin_point(self.block_info)
+            self.image_item.setOffset(-origin_x, -origin_y)
             self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
             self.image_item.setPixmap(
                 self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)

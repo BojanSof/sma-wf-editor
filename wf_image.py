@@ -99,7 +99,7 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
     def setRotation(self, angle):
         super().setRotation(angle)
         self.update_transform_handles()
-    
+
     def create_resize_handle(self):
         if self.resize_handle and self.resize_handle.scene():
             self.resize_handle.scene().removeItem(self.resize_handle)
@@ -143,6 +143,8 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
                 self.setCursor(Qt.CursorShape.SizeFDiagCursor)
             else:
                 self.setCursor(Qt.CursorShape.OpenHandCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def mousePressEvent(self, event):
         if self.resize_enabled:
