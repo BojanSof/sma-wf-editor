@@ -275,6 +275,13 @@ class WatchFaceLayer(QListWidgetItem):
         is_arm_block = self.block_info.blocktype in arm_block_types
         for rot_element in self.rotation_elements:
             rot_element.setVisible(is_arm_block)
+        self.image_item.setRotatable(is_arm_block)
+        if self.block_info.blocktype == BlockType.Background:
+            self.image_item.setMovable(False)
+            self.image_item.setResizable(False)
+        else:
+            self.image_item.setMovable(True)
+            self.image_item.setResizable(True)
         self.block_info.width = self.width_spinbox.value()
         self.block_info.height = self.height_spinbox.value()
         self.block_info.pos_x = self.x_spinbox.value()

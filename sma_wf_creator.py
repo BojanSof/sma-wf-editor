@@ -85,6 +85,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.image_items.append(img)
         self.scene.addItem(img)
         self.layer_items.append(layer)
+        layer.update_info()
 
     def load_watch_face(self):
         self.remove_all_layers()

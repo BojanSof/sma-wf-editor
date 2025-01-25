@@ -48,27 +48,6 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
         if self.rotate_origin:
             self.rotate_origin.setVisible(False)
 
-    def create_resize_handle(self):
-        if self.resize_handle and self.resize_handle.scene():
-            self.resize_handle.scene().removeItem(self.resize_handle)
-        rect = self.boundingRect()
-        x, y = (
-            rect.right() - self.resize_handle_size,
-            rect.bottom() - self.resize_handle_size,
-        )
-        self.resize_handle = QGraphicsRectItem(x, y, self.resize_handle_size, self.resize_handle_size, self)
-        self.resize_handle.setBrush(QColor(255, 0, 0, 200))
-        self.resize_handle.setPen(QPen(Qt.PenStyle.NoPen))
-
-    def create_rotate_origin(self):
-        if self.rotate_origin and self.rotate_origin.scene():
-            self.rotate_origin.scene().removeItem(self.rotate_origin)
-        x = self.transformOriginPoint().x() - self.rotate_origin_size // 2
-        y = self.transformOriginPoint().y() - self.rotate_origin_size // 2
-        self.rotate_origin = QGraphicsEllipseItem(x, y, self.rotate_origin_size, self.rotate_origin_size, self)
-        self.rotate_origin.setBrush(QColor(0, 255, 0, 200))
-        self.rotate_origin.setPen(QPen(Qt.PenStyle.NoPen))
-
     def setPixmap(self, pixmap):
         if self.pixmap().isNull():
             super().setPixmap(pixmap)
@@ -103,25 +82,54 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
 
     def setResizable(self, resizable):
         self.resize_enabled = resizable
-        self.update_resize_handle()
+        if self.resize_enabled:
+            self.update_resize_handle()
+        else:
+            if self.resize_handle and self.resize_handle.scene():
+                self.resize_handle.scene().removeItem(self.resize_handle)
 
     def setRotatable(self, rotatable):
         self.rotate_enabled = rotatable
-        self.update_rotate_origin()
+        if self.rotate_enabled:
+            self.update_rotate_origin()
+        else:
+            if self.rotate_origin and self.rotate_origin.scene():
+                self.rotate_origin.scene().removeItem(self.rotate_origin)
 
     def setRotation(self, angle):
         super().setRotation(angle)
         self.update_transform_handles()
+    
+    def create_resize_handle(self):
+        if self.resize_handle and self.resize_handle.scene():
+            self.resize_handle.scene().removeItem(self.resize_handle)
+        rect = self.boundingRect()
+        x, y = (
+            rect.right() - self.resize_handle_size,
+            rect.bottom() - self.resize_handle_size,
+        )
+        self.resize_handle = QGraphicsRectItem(x, y, self.resize_handle_size, self.resize_handle_size, self)
+        self.resize_handle.setBrush(QColor(255, 0, 0, 200))
+        self.resize_handle.setPen(QPen(Qt.PenStyle.NoPen))
+
+    def create_rotate_origin(self):
+        if self.rotate_origin and self.rotate_origin.scene():
+            self.rotate_origin.scene().removeItem(self.rotate_origin)
+        x = self.transformOriginPoint().x() - self.rotate_origin_size // 2
+        y = self.transformOriginPoint().y() - self.rotate_origin_size // 2
+        self.rotate_origin = QGraphicsEllipseItem(x, y, self.rotate_origin_size, self.rotate_origin_size, self)
+        self.rotate_origin.setBrush(QColor(0, 255, 0, 200))
+        self.rotate_origin.setPen(QPen(Qt.PenStyle.NoPen))
 
     def update_resize_handle(self):
         if self.resize_enabled:
-            visible = self.resize_handle.isVisible()
+            visible = self.isSelected()
             self.create_resize_handle()
             self.resize_handle.setVisible(visible)
 
     def update_rotate_origin(self):
         if self.rotate_enabled:
-            visible = self.rotate_origin.isVisible()
+            visible = self.isSelected()
             self.create_rotate_origin()
             self.rotate_origin.setVisible(visible)
 
