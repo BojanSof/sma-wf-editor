@@ -1,14 +1,20 @@
 import sys
 
-from PySide6.QtWidgets import QApplication, QGraphicsScene, QMainWindow, QFileDialog
-from PySide6.QtGui import QPixmap
-from PIL.ImageQt import ImageQt
+from PySide6.QtWidgets import QApplication, QGraphicsScene, QMainWindow, QFileDialog, QMessageBox
 
 from wf_creator_window import Ui_MainWindow as SmaWfCreatorWindow
 from wf_image import WatchFaceImage
 from wf_layer import WatchFaceLayer
 
-from smawf import BlockHorizontalAlignment, BlockType, BlockInfo, WatchFace
+from smawf import (
+    BlockHorizontalAlignment,
+    BlockType,
+    BlockInfo,
+    WatchFace,
+    WatchFaceMetaData,
+    Header as WatchFaceHeader,
+    ImageData,
+)
 
 
 class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
@@ -47,7 +53,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
 
     def add_layer(self):
         block_info = BlockInfo(0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0, 0, 0)
-        self.create_layer(block_info, [], 0, 0, 0, 0, False)
+        self.create_layer(block_info, [], 0, 0, 0, 0)
 
     def remove_layer(self):
         selected_items = self.lwWfLayers.selectedItems()
@@ -90,12 +96,11 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         if file_name:
             with open(file_name, "rb") as f:
                 wf_data = f.read()
-            self.watch_face = WatchFace.loads(wf_data)
+            watch_face = WatchFace.loads(wf_data)
             self.image_items.clear()
-            for i, bi in enumerate(self.watch_face.meta_data.blocks_info):
-                # print(f"Block {i}: {bi}")
+            for i, bi in enumerate(watch_face.meta_data.blocks_info):
                 images = [
-                    QPixmap.fromImage(ImageQt(self.watch_face.imgs_data[bi.img_id + i_img].unpack()))
+                    watch_face.imgs_data[bi.img_id + i_img].unpack()
                     for i_img in range(bi.num_imgs)
                 ]
                 origin_x = bi.cent_x
@@ -109,7 +114,27 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                 self.create_layer(bi, images, x, y, origin_x, origin_y)
 
     def save_watch_face(self):
-        print("Save Watch Face")
+        file_name, _ = QFileDialog.getSaveFileName(self, "Open Watch Face File", "", "Bin Files (*.bin)")
+        if file_name:
+            blocks_info = []
+            imgs_data = []
+            img_offset = 0
+            for layer in self.layer_items:
+                bi = layer.block_info
+                layer_images = layer.get_images()
+                for img in layer_images:
+                    img_data = ImageData.pack(img, bi.compr)
+                    imgs_data.append(img_data)
+                    img_offset += len(bytes(img_data))
+                bi.img_offset = img_offset
+                blocks_info.append(bi)
+            imgs_size_info = [len(bytes(img_data)) for img_data in imgs_data]
+            header = WatchFaceHeader(len(imgs_data), len(blocks_info), 2)
+            wf_metadata = WatchFaceMetaData(header, blocks_info, imgs_size_info)
+            wf = WatchFace(wf_metadata, imgs_data)
+            with open(file_name, "wb") as f:
+                f.write(bytes(wf))
+            QMessageBox.information(self, "Save Watch Face", "Watch Face saved successfully")
 
     def preview_watch_face(self):
         print("Preview Watch Face")

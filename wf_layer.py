@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
+from PIL import Image
+from PIL.ImageQt import ImageQt
 from wf_image import WatchFaceImage
 from smawf import BlockHorizontalAlignment, BlockType, BlockInfo, get_arm_block_types, get_origin_point
 
@@ -150,7 +152,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.rgba_checkbox.stateChanged.connect(self.update_info)
 
         self.load_button = QPushButton("Load Images")
-        self.load_button.clicked.connect(self.load_image)
+        self.load_button.clicked.connect(self.load_images)
 
         preview_type_layout = QHBoxLayout()
         preview_type_layout.addWidget(self.image_combobox)
@@ -215,42 +217,42 @@ class WatchFaceLayer(QListWidgetItem):
     def update_image_combobox(self):
         self.image_combobox.clear()
         for i, img in enumerate(self.images):
-            icon = QIcon(img)
+            icon = QIcon(QPixmap.fromImage(ImageQt(img)))
             self.image_combobox.addItem(icon, "")
 
     def update_image(self):
         current_index = self.image_combobox.currentIndex()
         if current_index >= 0 and current_index < len(self.images):
-            self.pixmap = self.images[current_index]
+            self.pixmap = QPixmap.fromImage(ImageQt(self.images[current_index]))
             self.image_combobox.setItemIcon(self.image_combobox.currentIndex(), QIcon(self.pixmap))
+            pixmap = QPixmap.fromImage(ImageQt(self.images[current_index]))
             self.image_item.setNewPixmap(
-                self.images[current_index].scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
+                pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
             )
 
-    def load_image(self):
+    def load_images(self):
         file_names, _ = QFileDialog.getOpenFileNames(self.widget, "Open Image File", "", "Images (*.png)")
         if file_names:
             self.images.clear()
-            images = [QPixmap(file_name) for file_name in file_names]
-            if not all(img.width() == images[0].width() and img.height() == images[0].height() for img in images):
+            images = [Image.open(file_name) for file_name in file_names]
+            if not all(img.width == images[0].width and img.height == images[0].height for img in images):
                 QMessageBox.critical(
                     self, "Image size mismatch", "All images must have the same width and height", QMessageBox.Ok
                 )
                 return
-            for file_name in file_names:
-                self.images.append(QPixmap(file_name))
+            self.images = images
             self.width_spinbox.blockSignals(True)
             self.height_spinbox.blockSignals(True)
-            self.width_spinbox.setValue(images[0].width())
-            self.height_spinbox.setValue(images[0].height())
+            self.width_spinbox.setValue(images[0].width)
+            self.height_spinbox.setValue(images[0].height)
             self.width_spinbox.blockSignals(False)
             self.height_spinbox.blockSignals(False)
             self.update_image_combobox()
             self.update_info()
             self.update_image()
 
-    def get_image(self):
-        return self.pixmap
+    def get_images(self):
+        return self.images
 
     def update_width(self):
         if not self.image_item.pixmap().isNull():
