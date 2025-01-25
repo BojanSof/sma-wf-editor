@@ -30,34 +30,27 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
         self.setPos(x, y)
         self.resizing = False
         self.resize_handle_size = 10
-        self.resize_handle = None
         self.rotating = False
         self.rotate_origin_size = 10
+
+        self.resize_handle = None
         self.rotate_origin = None
+        self.create_resize_handle()
+        self.create_rotate_origin()
 
-        self.resize_enabled = resizable
-        self.move_enabled = movable
-        self.select_enabled = selectable
-        self.rotate_enabled = rotatable
+        self.setSelectable(selectable)
+        self.setMovable(movable)
+        self.setResizable(resizable)
+        self.setRotatable(rotatable)
 
-        self.setFlag(
-            QGraphicsPixmapItem.GraphicsItemFlag.ItemIsMovable
-            | QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
-            | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges,
-            movable,
-        )
-        self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsSelectable, selectable)
-        if self.resize_enabled:
-            self.create_resize_handle()
+        if self.resize_handle:
             self.resize_handle.setVisible(False)
-        if self.rotate_enabled:
-            self.create_rotate_origin()
+        if self.rotate_origin:
             self.rotate_origin.setVisible(False)
 
     def create_resize_handle(self):
-        if self.resize_handle:
-            self.scene().removeItem(self.resize_handle)
-
+        if self.resize_handle and self.resize_handle.scene():
+            self.resize_handle.scene().removeItem(self.resize_handle)
         rect = self.boundingRect()
         x, y = (
             rect.right() - self.resize_handle_size,
@@ -68,8 +61,8 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
         self.resize_handle.setPen(QPen(Qt.PenStyle.NoPen))
 
     def create_rotate_origin(self):
-        if self.rotate_origin:
-            self.scene().removeItem(self.rotate_origin)
+        if self.rotate_origin and self.rotate_origin.scene():
+            self.rotate_origin.scene().removeItem(self.rotate_origin)
         x = self.transformOriginPoint().x() - self.rotate_origin_size // 2
         y = self.transformOriginPoint().y() - self.rotate_origin_size // 2
         self.rotate_origin = QGraphicsEllipseItem(x, y, self.rotate_origin_size, self.rotate_origin_size, self)
@@ -89,25 +82,52 @@ class WatchFaceImage(QGraphicsPixmapItem, QObject):
             scale_y = new_height / old_height
             self.setOffset(self.offset().x() * scale_x, self.offset().y() * scale_y)
         self.update_transform_handles()
-    
+
     def setNewPixmap(self, pixmap):
         self.original_pixmap = pixmap
         super().setPixmap(pixmap)
         self.update_transform_handles()
 
+    def setSelectable(self, selectable):
+        self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsSelectable, selectable)
+        self.select_enabled = selectable
+
+    def setMovable(self, movable):
+        self.move_enabled = movable
+        self.setFlag(
+            QGraphicsPixmapItem.GraphicsItemFlag.ItemIsMovable
+            | QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+            | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges,
+            movable,
+        )
+
+    def setResizable(self, resizable):
+        self.resize_enabled = resizable
+        self.update_resize_handle()
+
+    def setRotatable(self, rotatable):
+        self.rotate_enabled = rotatable
+        self.update_rotate_origin()
+
     def setRotation(self, angle):
         super().setRotation(angle)
         self.update_transform_handles()
 
-    def update_transform_handles(self):
+    def update_resize_handle(self):
         if self.resize_enabled:
             visible = self.resize_handle.isVisible()
             self.create_resize_handle()
             self.resize_handle.setVisible(visible)
+
+    def update_rotate_origin(self):
         if self.rotate_enabled:
             visible = self.rotate_origin.isVisible()
             self.create_rotate_origin()
             self.rotate_origin.setVisible(visible)
+
+    def update_transform_handles(self):
+        self.update_resize_handle()
+        self.update_rotate_origin()
 
     def hoverMoveEvent(self, event):
         if self.resize_enabled:

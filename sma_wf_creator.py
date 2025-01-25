@@ -68,23 +68,22 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.scene.clear()
     
     def create_layer(self, block_info, images, x, y, origin_x, origin_y, rotatable):
-        layer = WatchFaceLayer(block_info, images, self.width, self.height, origin_x, origin_y)
-        self.lwWfLayers.addItem(layer)
-        self.lwWfLayers.setItemWidget(layer, layer.widget)
         img = WatchFaceImage(
-            layer.get_image(),
+            None,
             x=x,
             y=y,
             origin_x=origin_x,
             origin_y=origin_y,
             rotatable=rotatable,
         )
+        layer = WatchFaceLayer(img, block_info, images, self.width, self.height, origin_x, origin_y)
         img.positionChanged.connect(layer.set_position)
         img.sizeChanged.connect(layer.set_size)
         img.rotationChanged.connect(layer.set_rotation)
+        self.lwWfLayers.addItem(layer)
+        self.lwWfLayers.setItemWidget(layer, layer.widget)
         self.image_items.append(img)
         self.scene.addItem(img)
-        layer.image_item = img
         self.layer_items.append(layer)
 
     def load_watch_face(self):

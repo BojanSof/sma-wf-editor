@@ -19,7 +19,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
-from smawf import BlockHorizontalAlignment, BlockType, arm_block_types
+from wf_image import WatchFaceImage
+from smawf import BlockHorizontalAlignment, BlockType, BlockInfo, arm_block_types
 
 
 class IconOnlyDelegate(QStyledItemDelegate):
@@ -45,9 +46,20 @@ class IconOnlyDelegate(QStyledItemDelegate):
 
 
 class WatchFaceLayer(QListWidgetItem):
-    def __init__(self, block_info, images, max_x=1000, max_y=1000, rot_x=0, rot_y=0, parent=None):
+    def __init__(
+        self,
+        img_item: WatchFaceImage,
+        block_info: BlockInfo,
+        images: list[QPixmap],
+        max_x=1000,
+        max_y=1000,
+        rot_x=0,
+        rot_y=0,
+        parent=None,
+    ):
         super().__init__(parent)
 
+        self.image_item = img_item
         self.block_info = block_info
         self.images = images
 
@@ -197,7 +209,7 @@ class WatchFaceLayer(QListWidgetItem):
 
         self.pixmap = None
         if len(images) > 0:
-            self.set_image(images[0])
+            self.update_image()
 
     def update_image_combobox(self):
         self.image_combobox.clear()
@@ -208,11 +220,11 @@ class WatchFaceLayer(QListWidgetItem):
     def update_image(self):
         current_index = self.image_combobox.currentIndex()
         if current_index >= 0 and current_index < len(self.images):
-            self.set_image(self.images[current_index])
-            if hasattr(self, "image_item"):
-                self.image_item.setNewPixmap(
-                    self.images[current_index].scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
-                )
+            self.pixmap = self.images[current_index]
+            self.image_combobox.setItemIcon(self.image_combobox.currentIndex(), QIcon(self.pixmap))
+            self.image_item.setNewPixmap(
+                self.images[current_index].scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
+            )
 
     def load_image(self):
         file_names, _ = QFileDialog.getOpenFileNames(self.widget, "Open Image File", "", "Images (*.png)")
@@ -235,17 +247,12 @@ class WatchFaceLayer(QListWidgetItem):
             self.update_image_combobox()
             self.update_info()
             self.update_image()
-            self.set_image(self.images[0])
-
-    def set_image(self, image):
-        self.pixmap = image
-        self.image_combobox.setItemIcon(self.image_combobox.currentIndex(), QIcon(self.pixmap))
 
     def get_image(self):
         return self.pixmap
 
     def update_width(self):
-        if hasattr(self, "image_item") and not self.image_item.pixmap().isNull():
+        if not self.image_item.pixmap().isNull():
             aspect_ratio = self.image_item.pixmap().height() / self.image_item.pixmap().width()
             new_width = self.width_spinbox.value()
             new_height = round(new_width * aspect_ratio)
@@ -254,7 +261,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.update_info()
 
     def update_height(self):
-        if hasattr(self, "image_item") and self.image_item.pixmap() is not None:
+        if not self.image_item.pixmap().isNull():
             aspect_ratio = self.image_item.pixmap().width() / self.image_item.pixmap().height()
             new_height = self.height_spinbox.value()
             new_width = round(new_height * aspect_ratio)
@@ -278,12 +285,11 @@ class WatchFaceLayer(QListWidgetItem):
         self.block_info.is_rgba = self.rgba_checkbox.isChecked()
         self.block_info.num_imgs = len(self.images)
         if self.pixmap is not None:
-            if hasattr(self, "image_item"):
-                self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
-                self.image_item.setPixmap(
-                    self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
-                )
-                self.image_item.setRotation(self.rotation_spinbox.value())
+            self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
+            self.image_item.setPixmap(
+                self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
+            )
+            self.image_item.setRotation(self.rotation_spinbox.value())
 
     def set_position(self, x, y):
         self.x_spinbox.setValue(x)
