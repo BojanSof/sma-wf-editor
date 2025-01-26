@@ -21,12 +21,16 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QGraphicsView, QGridLayo
     QListWidget, QListWidgetItem, QMainWindow, QMenu,
     QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
     QStatusBar, QVBoxLayout, QWidget)
+import wf_creator_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(800, 600)
+        icon = QIcon()
+        icon.addFile(u":/icon/resources/icon.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        MainWindow.setWindowIcon(icon)
         self.actionLoadWf = QAction(MainWindow)
         self.actionLoadWf.setObjectName(u"actionLoadWf")
         self.actionSaveWf = QAction(MainWindow)

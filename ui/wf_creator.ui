@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>SMA smart watch face creator</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="wf_creator.qrc">
+    <normaloff>:/icon/resources/icon.png</normaloff>:/icon/resources/icon.png</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
@@ -171,6 +175,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="wf_creator.qrc"/>
+ </resources>
  <connections/>
 </ui>

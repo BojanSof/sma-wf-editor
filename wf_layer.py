@@ -113,13 +113,13 @@ class WatchFaceLayer(QListWidgetItem):
         self.rot_x_spinbox.setRange(0, max_x)
         self.rot_x_spinbox.setValue(rot_x)
         self.rot_x_spinbox.setMaximumWidth(70)
-        self.rot_x_spinbox.valueChanged.connect(self.update_info)
+        self.rot_x_spinbox.valueChanged.connect(self.update_origin)
 
         self.rot_y_spinbox = QSpinBox()
         self.rot_y_spinbox.setRange(0, max_y)
         self.rot_y_spinbox.setValue(rot_y)
         self.rot_y_spinbox.setMaximumWidth(70)
-        self.rot_y_spinbox.valueChanged.connect(self.update_info)
+        self.rot_y_spinbox.valueChanged.connect(self.update_origin)
 
         self.align_map = {
             BlockHorizontalAlignment.NotSpecified: "Not specified",
@@ -130,7 +130,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.align_combobox = QComboBox()
         self.align_combobox.addItems(list(self.align_map.values()))
         self.align_combobox.setCurrentText(self.align_map[block_info.align])
-        self.align_combobox.currentIndexChanged.connect(self.update_info)
+        self.align_combobox.currentIndexChanged.connect(self.update_origin)
         self.align_combobox.setMaximumWidth(70)
 
         self.num_images_lineedit = QLineEdit()
@@ -272,6 +272,21 @@ class WatchFaceLayer(QListWidgetItem):
             self.width_spinbox.setValue(new_width)
             self.width_spinbox.blockSignals(False)
         self.update_info()
+    
+    def update_origin(self):
+        self.reverse_align_map = {v: k for k, v in self.align_map.items()}
+        self.block_info.align = self.reverse_align_map[self.align_combobox.currentText()]
+        self.block_info.cent_x = self.rot_x_spinbox.value()
+        self.block_info.cent_y = self.rot_y_spinbox.value()
+        origin_x, origin_y = get_origin_point(self.block_info)
+        prev_origin_x = -self.image_item.offset().x()
+        prev_origin_y = -self.image_item.offset().y()
+        dx = origin_x - prev_origin_x
+        dy = origin_y - prev_origin_y
+        self.image_item.setOffset(-origin_x, -origin_y)
+        self.block_info.pos_x += dx
+        self.block_info.pos_y += dy
+        self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
 
     def update_info(self):
         self.block_info.blocktype = BlockType[self.type_field.currentText()]
@@ -289,20 +304,16 @@ class WatchFaceLayer(QListWidgetItem):
         self.block_info.height = self.height_spinbox.value()
         self.block_info.pos_x = self.x_spinbox.value()
         self.block_info.pos_y = self.y_spinbox.value()
-        self.reverse_align_map = {v: k for k, v in self.align_map.items()}
-        self.block_info.align = self.reverse_align_map[self.align_combobox.currentText()]
         self.block_info.cent_x = self.rot_x_spinbox.value()
         self.block_info.cent_y = self.rot_y_spinbox.value()
         self.block_info.compr = 0 if self.compression_combobox.currentIndex() == 0 else 4
         self.block_info.is_rgba = self.rgba_checkbox.isChecked()
         self.block_info.num_imgs = len(self.images)
         if self.pixmap is not None:
-            origin_x, origin_y = get_origin_point(self.block_info)
-            self.image_item.setOffset(-origin_x, -origin_y)
-            self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
             self.image_item.setPixmap(
                 self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)
             )
+            self.image_item.setPos(self.block_info.pos_x, self.block_info.pos_y)
             self.image_item.setRotation(self.rotation_spinbox.value())
 
     def set_position(self, x, y):

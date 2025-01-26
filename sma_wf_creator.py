@@ -6,6 +6,8 @@ from wf_creator_window import Ui_MainWindow as SmaWfCreatorWindow
 from wf_image import WatchFaceImage
 from wf_layer import WatchFaceLayer
 
+from smawf import get_origin_point
+
 from smawf import (
     BlockHorizontalAlignment,
     BlockType,
@@ -71,7 +73,9 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.image_items.clear()
         self.scene.clear()
 
-    def create_layer(self, block_info, images, x, y, origin_x, origin_y):
+    def create_layer(self, block_info, images):
+        origin_x, origin_y = get_origin_point(block_info)
+        x, y = block_info.pos_x, block_info.pos_y
         img = WatchFaceImage(
             None,
             x=x,
@@ -103,15 +107,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                     watch_face.imgs_data[bi.img_id + i_img].unpack()
                     for i_img in range(bi.num_imgs)
                 ]
-                origin_x = bi.cent_x
-                origin_y = bi.cent_y
-                x = bi.pos_x
-                y = bi.pos_y
-                if bi.align == BlockHorizontalAlignment.Center:
-                    origin_x = bi.width // 2
-                elif bi.align == BlockHorizontalAlignment.Right:
-                    origin_x = bi.width
-                self.create_layer(bi, images, x, y, origin_x, origin_y)
+                self.create_layer(bi, images)
 
     def save_watch_face(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Open Watch Face File", "", "Bin Files (*.bin)")
