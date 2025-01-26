@@ -566,6 +566,133 @@ class WatchFace:
                 offset += img_size
         return WatchFace(meta_data, imgs_data)
 
+    def preview(
+        self,
+        hour: int = 9,
+        minutes: int = 0,
+        seconds: int = 23,
+        date_month: int = 25,
+        date_day: int = 9,
+        week_day: int = 3,
+        steps: int = 23456,
+        distance: float = 22.5,
+        calories: int = 2345,
+        heart_rate: int = 106,
+        battery: int = 100,
+    ) -> Image.Image:
+        def digital_block_paste(
+            img: Image.Image, block_info: BlockInfo, value: float, num_digits: int, pad_zeros: bool = True
+        ):
+            value_str = str(value).zfill(num_digits) if pad_zeros else str(value)
+            sign = -1 if block_info.align == BlockHorizontalAlignment.Right else 1
+            start_x = (
+                block_info.pos_x
+                if block_info.align == BlockHorizontalAlignment.Left
+                else block_info.pos_x - block_info.width
+            )
+            if sign == -1:
+                value_str = value_str[::-1]
+            for i, digit in enumerate(value_str):
+                if digit == ".":
+                    digit_id = 10
+                else:
+                    digit_id = int(digit)
+                layer_img = self.imgs_data[block_info.img_id + digit_id].unpack()
+                mask = layer_img if block_info.is_rgba else None
+                img.paste(layer_img, (start_x + sign * i * block_info.width, block_info.pos_y), mask)
+
+        def analog_block_paste(img: Image.Image, block_info: BlockInfo, angle: float, width: int, height: int):
+            layer_img = self.imgs_data[block_info.img_id].unpack()
+            new_img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            center_x = block_info.width - block_info.cent_x
+            center_y = block_info.height - block_info.cent_y
+            x = block_info.pos_x - center_x
+            y = block_info.pos_y - center_y
+            mask = layer_img if block_info.is_rgba else None
+            new_img.paste(layer_img, (x, y), mask)
+            new_center_x = x + center_x
+            new_center_y = y + center_y
+            new_img = new_img.rotate(-angle, resample=Image.Resampling.BICUBIC, center=(new_center_x, new_center_y))
+            new_mask = new_img if block_info.is_rgba else None
+            img.paste(new_img, (0, 0), new_mask)
+
+        bg_info = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Background), None)
+        if not bg_info:
+            raise ValueError("No background block found")
+        img = Image.new("RGBA", (bg_info.width, bg_info.height), (0, 0, 0, 0))
+        # put background first
+        img.paste(self.imgs_data[bg_info.img_id].unpack(), (bg_info.pos_x, bg_info.pos_y))
+        # put hours, minutes and seconds and check digital or analog type
+        hours_digital = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Hours), None)
+        if hours_digital:
+            digital_block_paste(img, hours_digital, hour, 2)
+        hours_analog = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.HoursArm), None)
+        if hours_analog:
+            angle = 30 * (hour % 12) + 30 * minutes / 60
+            analog_block_paste(img, hours_analog, angle, bg_info.width, bg_info.height)
+        minutes_digital = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Minutes), None)
+        if minutes_digital:
+            digital_block_paste(img, minutes_digital, minutes, 2)
+        minutes_analog = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.MinutesArm), None)
+        if minutes_analog:
+            angle = 6 * minutes + 6 * seconds / 60
+            analog_block_paste(img, minutes_analog, angle, bg_info.width, bg_info.height)
+        seconds_digital = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Seconds), None)
+        if seconds_digital:
+            digital_block_paste(img, seconds_digital, seconds, 2)
+        seconds_analog = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.SecondsArm), None)
+        if seconds_analog:
+            angle = 6 * seconds
+            analog_block_paste(img, seconds_analog, angle, bg_info.width, bg_info.height)
+        # put date
+        date_month_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Month), None)
+        if date_month_block:
+            digital_block_paste(img, date_month_block, date_month, 2)
+        date_day_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Day), None)
+        if date_day_block:
+            digital_block_paste(img, date_day_block, date_day, 2)
+        # put week day
+        week_day_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.WeekDay), None)
+        if week_day_block:
+            digital_block_paste(img, week_day_block, week_day, 1)
+        # put steps
+        steps_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Steps), None)
+        if steps_block:
+            digital_block_paste(img, steps_block, steps, 6, False)
+        # put distance
+        distance_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Distance), None)
+        if distance_block:
+            digital_block_paste(img, distance_block, distance, 6, False)
+        # put distance label
+        distance_label_block = next(
+            (bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.DistanceLabel), None
+        )
+        if distance_label_block:
+            img.paste(
+                self.imgs_data[distance_label_block.img_id].unpack(),
+                (distance_label_block.pos_x, distance_label_block.pos_y),
+            )
+        # put calories
+        calories_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Calories), None)
+        if calories_block:
+            digital_block_paste(img, calories_block, calories, 4, False)
+        # put heart rate
+        heart_rate_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.HeartRate), None)
+        if heart_rate_block:
+            digital_block_paste(img, heart_rate_block, heart_rate, 3, False)
+        # put battery
+        battery_block = next((bi for bi in self.meta_data.blocks_info if bi.blocktype == BlockType.Battery), None)
+        if battery_block:
+            # choose the image for the current battery level (battery level is split in num_imgs images)
+            battery_id = min(battery_block.num_imgs - 1, battery // (100 // battery_block.num_imgs))
+            bat_img = self.imgs_data[battery_block.img_id + battery_id].unpack()
+            img.paste(
+                bat_img,
+                (battery_block.pos_x, battery_block.pos_y),
+                bat_img,
+            )
+        return img
+
 
 def get_arm_block_types():
     return [BlockType.HoursArm, BlockType.MinutesArm, BlockType.SecondsArm]
