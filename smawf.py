@@ -249,6 +249,9 @@ class ImageCompressedData:
         ]
         return ImageCompressedData(lines_info, data, width, height, is_rgba)
 
+    def unpack(self) -> Image.Image:
+        return self.decompress()
+
     def decompress(self) -> Image.Image:
         """
         Compression type is 0x04.
@@ -582,7 +585,7 @@ class WatchFace:
         calories: int = 2345,
         heart_rate: int = 106,
         battery: int = 100,
-    ) -> Image.Image | list[Image.Image]:
+    ) -> list[Image.Image]:
         def digital_block_paste(
             img: Image.Image, block_info: BlockInfo, value: float, num_digits: int, pad_zeros: bool = True
         ):
@@ -619,60 +622,76 @@ class WatchFace:
             new_mask = new_img if block_info.is_rgba else None
             img.paste(new_img, (0, 0), new_mask)
 
-        animation_block = None
-        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        imgs = [Image.new("RGBA", (width, height), (0, 0, 0, 0))]
         for bi in self.meta_data.blocks_info:
             if bi.blocktype == BlockType.Background:
-                img.paste(self.imgs_data[bi.img_id].unpack(), (bi.pos_x, bi.pos_y))
+                for img in imgs:
+                    img.paste(self.imgs_data[bi.img_id].unpack(), (bi.pos_x, bi.pos_y))
             elif bi.blocktype == BlockType.Hours:
-                digital_block_paste(img, bi, hour, 2)
+                for img in imgs:
+                    digital_block_paste(img, bi, hour, 2)
             elif bi.blocktype == BlockType.Minutes:
-                digital_block_paste(img, bi, minutes, 2)
+                for img in imgs:
+                    digital_block_paste(img, bi, minutes, 2)
             elif bi.blocktype == BlockType.Seconds:
-                digital_block_paste(img, bi, seconds, 2)
+                for img in imgs:
+                    digital_block_paste(img, bi, seconds, 2)
             elif bi.blocktype == BlockType.HoursArm:
-                angle = 30 * (hour % 12) + 30 * minutes / 60
-                analog_block_paste(img, bi, angle, width, height)
+                for img in imgs:
+                    angle = 30 * (hour % 12) + 30 * minutes / 60
+                    analog_block_paste(img, bi, angle, width, height)
             elif bi.blocktype == BlockType.MinutesArm:
-                angle = 6 * minutes + 6 * seconds / 60
-                analog_block_paste(img, bi, angle, width, height)
+                for img in imgs:
+                    angle = 6 * minutes + 6 * seconds / 60
+                    analog_block_paste(img, bi, angle, width, height)
             elif bi.blocktype == BlockType.SecondsArm:
-                angle = 6 * seconds
-                analog_block_paste(img, bi, angle, width, height)
+                for img in imgs:
+                    angle = 6 * seconds
+                    analog_block_paste(img, bi, angle, width, height)
             elif bi.blocktype == BlockType.Year:
-                digital_block_paste(img, bi, date_year, 2)
+                for img in imgs:
+                    digital_block_paste(img, bi, date_year, 2)
             elif bi.blocktype == BlockType.Month:
-                digital_block_paste(img, bi, date_month, 2)
+                for img in imgs:
+                    digital_block_paste(img, bi, date_month, 2)
             elif bi.blocktype == BlockType.Day:
-                digital_block_paste(img, bi, date_day, 2)
+                for img in imgs:
+                    digital_block_paste(img, bi, date_day, 2)
             elif bi.blocktype == BlockType.WeekDay:
-                digital_block_paste(img, bi, week_day, 1)
+                for img in imgs:
+                    digital_block_paste(img, bi, week_day, 1)
             elif bi.blocktype == BlockType.Steps:
-                digital_block_paste(img, bi, steps, 6, False)
+                for img in imgs:
+                    digital_block_paste(img, bi, steps, 6, False)
             elif bi.blocktype == BlockType.Distance:
-                digital_block_paste(img, bi, distance, 6, False)
+                for img in imgs:
+                    digital_block_paste(img, bi, distance, 6, False)
             elif bi.blocktype == BlockType.DistanceLabel:
-                img.paste(self.imgs_data[bi.img_id].unpack(), (bi.pos_x, bi.pos_y))
+                for img in imgs:
+                    img.paste(self.imgs_data[bi.img_id].unpack(), (bi.pos_x, bi.pos_y))
             elif bi.blocktype == BlockType.Calories:
-                digital_block_paste(img, bi, calories, 4, False)
+                for img in imgs:
+                    digital_block_paste(img, bi, calories, 4, False)
             elif bi.blocktype == BlockType.HeartRate:
-                digital_block_paste(img, bi, heart_rate, 3, False)
+                for img in imgs:
+                    digital_block_paste(img, bi, heart_rate, 3, False)
             elif bi.blocktype == BlockType.Battery:
-                battery_id = min(bi.num_imgs - 1, battery // (100 // bi.num_imgs))
-                bat_img = self.imgs_data[bi.img_id + battery_id].unpack()
-                img.paste(bat_img, (bi.pos_x, bi.pos_y), bat_img)
+                for img in imgs:
+                    battery_id = min(bi.num_imgs - 1, battery // (100 // bi.num_imgs))
+                    bat_img = self.imgs_data[bi.img_id + battery_id].unpack()
+                    img.paste(bat_img, (bi.pos_x, bi.pos_y), bat_img)
             elif bi.blocktype == BlockType.Animation:
-                animation_block = bi
+                anim_layer_imgs = [
+                    self.imgs_data[bi.img_id + i].unpack() for i in range(bi.num_imgs)
+                ]
+                imgs = [imgs[0].copy() for _ in range(bi.num_imgs)]
+                for i, anim_img in enumerate(anim_layer_imgs):
+                    mask = anim_img if bi.is_rgba else None
+                    imgs[i].paste(anim_img, (bi.pos_x, bi.pos_y), mask)
             else:
-                print(f"Can't use block type {bi.blocktype} for preview")
-        if animation_block:
-            anim_layer_imgs = [
-                self.imgs_data[animation_block.img_id + i].unpack() for i in range(animation_block.num_imgs)
-            ]
-            img = [img.copy() for _ in range(animation_block.num_imgs)]
-            for i, anim_img in enumerate(anim_layer_imgs):
-                img[i].paste(anim_img, (animation_block.pos_x, animation_block.pos_y), anim_img)
-        return img
+                # print(f"Can't use block type {bi.blocktype} for preview")
+                pass
+        return imgs
 
 
 def get_arm_block_types():
