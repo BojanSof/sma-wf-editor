@@ -197,7 +197,7 @@ class WatchFaceLayer(QListWidgetItem):
         row += 1
         options_layout.addWidget(QLabel("Num Images:"), row, 0)
         options_layout.addWidget(self.num_images_lineedit, row, 1)
-        options_layout.addWidget(self.load_button, row, 4)
+        options_layout.addWidget(self.load_button, row, 2, 1, 3)
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(preview_type_layout)

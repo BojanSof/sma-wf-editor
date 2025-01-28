@@ -1,8 +1,10 @@
 from io import BytesIO
 
-from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QFileDialog, QMessageBox
-from PySide6.QtGui import QMovie
-from PySide6.QtCore import Qt, QByteArray, QBuffer
+from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QFileDialog, QMessageBox, QLayout
+from PySide6.QtGui import QMovie, QIcon
+from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize
+
+import wf_creator_rc  # noqa
 
 
 class PreviewDialog(QDialog):
@@ -10,9 +12,12 @@ class PreviewDialog(QDialog):
         super().__init__(parent)
         self.gif = None
         self.init_ui()
-    
+
     def init_ui(self):
         self.setWindowTitle("Watch Face Preview")
+        icon = QIcon()
+        icon.addFile(":/icon/resources/icon.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.setWindowIcon(icon)
 
         self.gif_view = QLabel()
         self.gif_view.setAlignment(Qt.AlignCenter)
@@ -23,6 +28,8 @@ class PreviewDialog(QDialog):
         layout = QVBoxLayout()
         layout.addWidget(self.gif_view)
         layout.addWidget(self.save_button)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         self.setLayout(layout)
 
     def set_gif(self, imgs):
@@ -39,7 +46,6 @@ class PreviewDialog(QDialog):
         self.gif.setCacheMode(QMovie.CacheMode.CacheAll)
         self.gif_view.setMovie(self.gif)
         self.gif.start()
-
 
     def save_image(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Image", "", "GIF Files (*.gif)")
