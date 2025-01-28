@@ -43,6 +43,8 @@ class Ui_MainWindow(object):
         self.actionExport_Preview.setObjectName(u"actionExport_Preview")
         self.actionPreview = QAction(MainWindow)
         self.actionPreview.setObjectName(u"actionPreview")
+        self.actionSaveImages = QAction(MainWindow)
+        self.actionSaveImages.setObjectName(u"actionSaveImages")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout_2 = QHBoxLayout(self.centralwidget)
@@ -149,6 +151,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSaveWf)
         self.menuFile.addAction(self.actionExit)
         self.menuTools.addAction(self.actionPreview)
+        self.menuTools.addAction(self.actionSaveImages)
 
         self.retranslateUi(MainWindow)
 
@@ -163,6 +166,7 @@ class Ui_MainWindow(object):
         self.actionAbout.setText(QCoreApplication.translate("MainWindow", u"About", None))
         self.actionExport_Preview.setText(QCoreApplication.translate("MainWindow", u"Export Preview", None))
         self.actionPreview.setText(QCoreApplication.translate("MainWindow", u"Create Preview", None))
+        self.actionSaveImages.setText(QCoreApplication.translate("MainWindow", u"Save all images", None))
         self.gbLayers.setTitle(QCoreApplication.translate("MainWindow", u"Layers", None))
         self.btnAddLayer.setText(QCoreApplication.translate("MainWindow", u"+ Add Layer", None))
         self.btnRemoveLayer.setText(QCoreApplication.translate("MainWindow", u"- Remove Layer", None))

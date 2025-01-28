@@ -139,6 +139,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionPreview"/>
+    <addaction name="actionSaveImages"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuTools"/>
@@ -172,6 +173,11 @@
   <action name="actionPreview">
    <property name="text">
     <string>Create Preview</string>
+   </property>
+  </action>
+  <action name="actionSaveImages">
+   <property name="text">
+    <string>Save all images</string>
    </property>
   </action>
  </widget>

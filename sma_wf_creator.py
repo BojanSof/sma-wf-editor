@@ -1,3 +1,4 @@
+import os
 import sys
 
 from PySide6.QtWidgets import QApplication, QGraphicsScene, QMainWindow, QFileDialog, QMessageBox
@@ -55,6 +56,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.actionSaveWf.triggered.connect(self.save_watch_face)
         self.actionExit.triggered.connect(self.close)
         self.actionPreview.triggered.connect(self.preview_watch_face)
+        self.actionSaveImages.triggered.connect(self.save_all_images)
 
     def add_layer(self):
         block_info = BlockInfo(0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0, 0, 0)
@@ -107,12 +109,9 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
             watch_face = WatchFace.loads(wf_data)
             self.image_items.clear()
             for bi in watch_face.meta_data.blocks_info:
-                images = [
-                    watch_face.imgs_data[bi.img_id + i_img].unpack()
-                    for i_img in range(bi.num_imgs)
-                ]
+                images = [watch_face.imgs_data[bi.img_id + i_img].unpack() for i_img in range(bi.num_imgs)]
                 self.create_layer(bi, images)
-    
+
     def create_watch_face(self):
         blocks_info = []
         imgs_data = []
@@ -144,6 +143,17 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         preview = wf.preview(self.width, self.height)
         self.preview_dialog.set_gif(preview)
         self.preview_dialog.show()
+
+    def save_all_images(self):
+        save_dir = QFileDialog.getExistingDirectory(self, "Open folder to save images")
+        if save_dir:
+            wf = self.create_watch_face()
+            for bi in wf.meta_data.blocks_info:
+                for i_img in range(bi.img_id, bi.img_id + bi.num_imgs):
+                    img = wf.imgs_data[i_img].unpack()
+                    img_name = str(bi.blocktype) + f"_{i_img - bi.img_id:02d}.png"
+                    img.save(os.path.join(save_dir, img_name))
+            QMessageBox.information(self, "Save Watch Face Images", "Watch Face images saved successfully")
 
     def on_layer_selection_changed(self):
         selected_items = self.lwWfLayers.selectedItems()
