@@ -148,8 +148,8 @@ class WatchFaceLayer(QListWidgetItem):
         self.compression_combobox.setMaximumWidth(70)
 
         self.rgba_checkbox = QCheckBox("RGBA")
+        self.rgba_checkbox.setEnabled(False)
         self.rgba_checkbox.setChecked(block_info.is_rgba)
-        self.rgba_checkbox.stateChanged.connect(self.update_info)
 
         self.load_button = QPushButton("Load Images")
         self.load_button.clicked.connect(self.load_images)
@@ -245,6 +245,7 @@ class WatchFaceLayer(QListWidgetItem):
             self.height_spinbox.blockSignals(True)
             self.width_spinbox.setValue(images[0].width)
             self.height_spinbox.setValue(images[0].height)
+            self.rgba_checkbox.setChecked(images[0].mode == "RGBA")
             self.width_spinbox.blockSignals(False)
             self.height_spinbox.blockSignals(False)
             self.update_image_combobox()
@@ -307,7 +308,6 @@ class WatchFaceLayer(QListWidgetItem):
         self.block_info.cent_x = self.rot_x_spinbox.value()
         self.block_info.cent_y = self.rot_y_spinbox.value()
         self.block_info.compr = 0 if self.compression_combobox.currentIndex() == 0 else 4
-        self.block_info.is_rgba = self.rgba_checkbox.isChecked()
         self.block_info.num_imgs = len(self.images)
         if self.pixmap is not None:
             self.image_item.setPixmap(
