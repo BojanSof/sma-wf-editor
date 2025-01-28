@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -25,15 +26,32 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.init_params()
-        self.init_wf_editor()
+        self.init_config()
         self.init_actions()
+        self.init_wf_editor()
+        self.change_device("Custom Device")
 
-    def init_params(self):
+    def init_config(self):
+        self.devices = ["Custom Device"]
         self.width = 410
         self.height = 502
-        self.leWidth.setText(str(self.width))
-        self.leHeight.setText(str(self.height))
+        if os.path.exists("devices.json"):
+            with open("devices.json") as f:
+                self.devices = json.load(f)
+
+    def init_actions(self):
+        self.comboDevice.addItems([dev["name"] for dev in self.devices])
+        self.comboDevice.currentTextChanged.connect(self.change_device)
+        self.spinboxWidth.valueChanged.connect(self.update_wf_editor)
+        self.spinboxHeight.valueChanged.connect(self.update_wf_editor)
+        self.btnAddLayer.clicked.connect(self.add_layer)
+        self.btnRemoveLayer.clicked.connect(self.remove_layer)
+        self.btnRemoveAllLayers.clicked.connect(self.remove_all_layers)
+        self.actionLoadWf.triggered.connect(self.load_watch_face)
+        self.actionSaveWf.triggered.connect(self.save_watch_face)
+        self.actionExit.triggered.connect(self.close)
+        self.actionPreview.triggered.connect(self.preview_watch_face)
+        self.actionSaveImages.triggered.connect(self.save_all_images)
 
     def init_wf_editor(self):
         self.scene = QGraphicsScene()
@@ -47,20 +65,36 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.scene.selectionChanged.connect(self.on_image_selection_changed)
 
         self.preview_dialog = PreviewDialog()
-
-    def init_actions(self):
-        self.btnAddLayer.clicked.connect(self.add_layer)
-        self.btnRemoveLayer.clicked.connect(self.remove_layer)
-        self.btnRemoveAllLayers.clicked.connect(self.remove_all_layers)
-        self.actionLoadWf.triggered.connect(self.load_watch_face)
-        self.actionSaveWf.triggered.connect(self.save_watch_face)
-        self.actionExit.triggered.connect(self.close)
-        self.actionPreview.triggered.connect(self.preview_watch_face)
-        self.actionSaveImages.triggered.connect(self.save_all_images)
-
+    
+    def change_device(self, dev_name):
+        device = [dev for dev in self.devices if dev["name"] == dev_name][0]
+        if device["name"] == "Custom Device":
+            self.spinboxWidth.setEnabled(True)
+            self.spinboxHeight.setEnabled(True)
+            self.width = 410
+            self.height = 502
+        else:
+            self.spinboxWidth.setEnabled(False)
+            self.spinboxHeight.setEnabled(False)
+            self.width = device["width"]
+            self.height = device["height"]
+        self.spinboxWidth.blockSignals(True)
+        self.spinboxHeight.blockSignals(True)
+        self.spinboxWidth.setValue(self.width)
+        self.spinboxHeight.setValue(self.height)
+        self.spinboxWidth.blockSignals(False)
+        self.spinboxHeight.blockSignals(False)
+    
+    def update_wf_editor(self):
+        self.width = self.spinboxWidth.value()
+        self.height = self.spinboxHeight.value()
+        self.scene.setSceneRect(0, 0, self.width, self.height)
+        
     def add_layer(self):
         block_info = BlockInfo(0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0, 0, 0)
-        self.create_layer(block_info, [], 0, 0, 0, 0)
+        self.create_layer(block_info, [])
+        if len(self.layer_items) > 0:
+            self.gbParams.setEnabled(False)
 
     def remove_layer(self):
         selected_items = self.lwWfLayers.selectedItems()
@@ -72,12 +106,15 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
             image_item = self.image_items.pop(row)
             self.scene.removeItem(image_item)
             self.layer_items.pop(row)
+        if len(self.layer_items) == 0:
+            self.gbParams.setEnabled(True)
 
     def remove_all_layers(self):
         self.layer_items.clear()
         self.lwWfLayers.clear()
         self.image_items.clear()
         self.scene.clear()
+        self.gbParams.setEnabled(True)
 
     def create_layer(self, block_info, images):
         origin_x, origin_y = get_origin_point(block_info)
@@ -111,6 +148,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
             for bi in watch_face.meta_data.blocks_info:
                 images = [watch_face.imgs_data[bi.img_id + i_img].unpack() for i_img in range(bi.num_imgs)]
                 self.create_layer(bi, images)
+            self.gbParams.setEnabled(False)
 
     def create_watch_face(self):
         blocks_info = []

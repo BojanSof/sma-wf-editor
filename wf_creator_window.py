@@ -17,9 +17,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGraphicsView, QGridLayout,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QMainWindow, QMenu,
-    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
+    QGroupBox, QHBoxLayout, QLabel, QListWidget,
+    QListWidgetItem, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QSizePolicy, QSpacerItem, QSpinBox,
     QStatusBar, QVBoxLayout, QWidget)
 import wf_creator_rc
 
@@ -92,11 +92,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.lblDevice, 0, 0, 1, 1)
 
-        self.leWidth = QLineEdit(self.gbParams)
-        self.leWidth.setObjectName(u"leWidth")
-
-        self.gridLayout.addWidget(self.leWidth, 1, 2, 1, 1)
-
         self.comboDevice = QComboBox(self.gbParams)
         self.comboDevice.setObjectName(u"comboDevice")
 
@@ -112,14 +107,23 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.lblHeight, 2, 0, 1, 1)
 
-        self.leHeight = QLineEdit(self.gbParams)
-        self.leHeight.setObjectName(u"leHeight")
-
-        self.gridLayout.addWidget(self.leHeight, 2, 2, 1, 1)
-
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.gridLayout.addItem(self.horizontalSpacer, 1, 1, 1, 1)
+
+        self.spinboxWidth = QSpinBox(self.gbParams)
+        self.spinboxWidth.setObjectName(u"spinboxWidth")
+        self.spinboxWidth.setMinimum(100)
+        self.spinboxWidth.setMaximum(700)
+
+        self.gridLayout.addWidget(self.spinboxWidth, 1, 2, 1, 1)
+
+        self.spinboxHeight = QSpinBox(self.gbParams)
+        self.spinboxHeight.setObjectName(u"spinboxHeight")
+        self.spinboxHeight.setMinimum(100)
+        self.spinboxHeight.setMaximum(700)
+
+        self.gridLayout.addWidget(self.spinboxHeight, 2, 2, 1, 1)
 
 
         self.verticalLayout.addWidget(self.gbParams)

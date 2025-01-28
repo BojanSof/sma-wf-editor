@@ -71,9 +71,6 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="2">
-          <widget class="QLineEdit" name="leWidth"/>
-         </item>
          <item row="0" column="2">
           <widget class="QComboBox" name="comboDevice"/>
          </item>
@@ -91,9 +88,6 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="2">
-          <widget class="QLineEdit" name="leHeight"/>
-         </item>
          <item row="1" column="1">
           <spacer name="horizontalSpacer">
            <property name="orientation">
@@ -106,6 +100,26 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item row="1" column="2">
+          <widget class="QSpinBox" name="spinboxWidth">
+           <property name="minimum">
+            <number>100</number>
+           </property>
+           <property name="maximum">
+            <number>700</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QSpinBox" name="spinboxHeight">
+           <property name="minimum">
+            <number>100</number>
+           </property>
+           <property name="maximum">
+            <number>700</number>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
