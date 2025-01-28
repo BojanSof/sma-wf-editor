@@ -577,7 +577,7 @@ class WatchFace:
         minutes: int = 0,
         seconds: int = 23,
         date_year: int = 25,
-        date_month: int = 25,
+        date_month: int = 3,
         date_day: int = 9,
         week_day: int = 3,
         steps: int = 23456,
@@ -592,9 +592,11 @@ class WatchFace:
             value_str = str(value).zfill(num_digits) if pad_zeros else str(value)
             sign = -1 if block_info.align == BlockHorizontalAlignment.Right else 1
             start_x = (
-                block_info.pos_x
-                if block_info.align == BlockHorizontalAlignment.Left
-                else block_info.pos_x - block_info.width
+                block_info.pos_x - block_info.width
+                if block_info.align == BlockHorizontalAlignment.Right
+                else block_info.pos_x - (len(str(value)) * block_info.width) // 2
+                if block_info.align == BlockHorizontalAlignment.Center
+                else block_info.pos_x
             )
             if sign == -1:
                 value_str = value_str[::-1]
@@ -636,6 +638,18 @@ class WatchFace:
             elif bi.blocktype == BlockType.Seconds:
                 for img in imgs:
                     digital_block_paste(img, bi, seconds, 2)
+            elif bi.blocktype == BlockType.HoursDigitTens:
+                for img in imgs:
+                    digital_block_paste(img, bi, hour // 10, 1)
+            elif bi.blocktype == BlockType.HoursDigitOnes:
+                for img in imgs:
+                    digital_block_paste(img, bi, hour % 10, 1)
+            elif bi.blocktype == BlockType.MinutesDigitTens:
+                for img in imgs:
+                    digital_block_paste(img, bi, minutes // 10, 1)
+            elif bi.blocktype == BlockType.MinutesDigitOnes:
+                for img in imgs:
+                    digital_block_paste(img, bi, minutes % 10, 1)
             elif bi.blocktype == BlockType.HoursArm:
                 for img in imgs:
                     angle = 30 * (hour % 12) + 30 * minutes / 60
@@ -652,8 +666,9 @@ class WatchFace:
                 for img in imgs:
                     digital_block_paste(img, bi, date_year, 2)
             elif bi.blocktype == BlockType.Month:
+                num_digits = 1 if bi.num_imgs == 12 else 2
                 for img in imgs:
-                    digital_block_paste(img, bi, date_month, 2)
+                    digital_block_paste(img, bi, date_month, num_digits)
             elif bi.blocktype == BlockType.Day:
                 for img in imgs:
                     digital_block_paste(img, bi, date_day, 2)
@@ -679,11 +694,10 @@ class WatchFace:
                 for img in imgs:
                     battery_id = min(bi.num_imgs - 1, battery // (100 // bi.num_imgs))
                     bat_img = self.imgs_data[bi.img_id + battery_id].unpack()
-                    img.paste(bat_img, (bi.pos_x, bi.pos_y), bat_img)
+                    mask = bat_img if bi.is_rgba else None
+                    img.paste(bat_img, (bi.pos_x, bi.pos_y), mask)
             elif bi.blocktype == BlockType.Animation:
-                anim_layer_imgs = [
-                    self.imgs_data[bi.img_id + i].unpack() for i in range(bi.num_imgs)
-                ]
+                anim_layer_imgs = [self.imgs_data[bi.img_id + i].unpack() for i in range(bi.num_imgs)]
                 imgs = [imgs[0].copy() for _ in range(bi.num_imgs)]
                 for i, anim_img in enumerate(anim_layer_imgs):
                     mask = anim_img if bi.is_rgba else None
