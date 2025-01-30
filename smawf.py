@@ -34,10 +34,13 @@ class BlockType(IntEnum):
     HeartRate = 15
     Calories = 16
     Distance = 17
-    Unknown1 = 22
+    BackgroundPiece = 22
     Animation = 23
     Battery = 24
+    Weather = 25
     StepsStrip = 30
+    DistanceStrip = 31
+    CaloriesStrip = 32
     HeartRateStrip = 33
     DistanceLabel = 37
     HoursDigitTens = 39
@@ -585,6 +588,10 @@ class WatchFace:
         calories: int = 2345,
         heart_rate: int = 106,
         battery: int = 100,
+        steps_goal=6000,
+        distance_goal=5,
+        calories_goal=300,
+        max_heart_rate=150
     ) -> list[Image.Image]:
         def digital_block_paste(
             img: Image.Image, block_info: BlockInfo, value: float, num_digits: int, pad_zeros: bool = True
@@ -623,12 +630,23 @@ class WatchFace:
             new_img = new_img.rotate(-angle, resample=Image.Resampling.BICUBIC, center=(new_center_x, new_center_y))
             new_mask = new_img if block_info.is_rgba else None
             img.paste(new_img, (0, 0), new_mask)
+        
+        def strip_block_paste(img: Image.Image, block_info: BlockInfo, value: float, goal: float):
+            id = min(block_info.num_imgs - 1, int(round((value // (goal / block_info.num_imgs)))))
+            layer_img = self.imgs_data[block_info.img_id + id].unpack()
+            mask = layer_img if block_info.is_rgba else None
+            img.paste(layer_img, (block_info.pos_x, block_info.pos_y), mask)
 
         imgs = [Image.new("RGBA", (width, height), (0, 0, 0, 0))]
         for bi in self.meta_data.blocks_info:
             if bi.blocktype == BlockType.Background:
                 for img in imgs:
                     img.paste(self.imgs_data[bi.img_id].unpack(), (bi.pos_x, bi.pos_y))
+            elif bi.blocktype == BlockType.BackgroundPiece:
+                bg_img = self.imgs_data[bi.img_id].unpack()
+                mask = bg_img if bi.is_rgba else None
+                for img in imgs:
+                    img.paste(bg_img, (bi.pos_x, bi.pos_y), mask)
             elif bi.blocktype == BlockType.Hours:
                 for img in imgs:
                     digital_block_paste(img, bi, hour, 2)
@@ -678,24 +696,33 @@ class WatchFace:
             elif bi.blocktype == BlockType.Steps:
                 for img in imgs:
                     digital_block_paste(img, bi, steps, 6, False)
+            elif bi.blocktype == BlockType.StepsStrip:
+                for img in imgs:
+                    strip_block_paste(img, bi, steps, steps_goal)
             elif bi.blocktype == BlockType.Distance:
                 for img in imgs:
                     digital_block_paste(img, bi, distance, 6, False)
+            elif bi.blocktype == BlockType.DistanceStrip:
+                for img in imgs:
+                    strip_block_paste(img, bi, distance, distance_goal)
             elif bi.blocktype == BlockType.DistanceLabel:
                 for img in imgs:
                     img.paste(self.imgs_data[bi.img_id].unpack(), (bi.pos_x, bi.pos_y))
             elif bi.blocktype == BlockType.Calories:
                 for img in imgs:
                     digital_block_paste(img, bi, calories, 4, False)
+            elif bi.blocktype == BlockType.CaloriesStrip:
+                for img in imgs:
+                    strip_block_paste(img, bi, calories, calories_goal)
             elif bi.blocktype == BlockType.HeartRate:
                 for img in imgs:
                     digital_block_paste(img, bi, heart_rate, 3, False)
+            elif bi.blocktype == BlockType.HeartRateStrip:
+                for img in imgs:
+                    strip_block_paste(img, bi, heart_rate, max_heart_rate)
             elif bi.blocktype == BlockType.Battery:
                 for img in imgs:
-                    battery_id = min(bi.num_imgs - 1, battery // (100 // bi.num_imgs))
-                    bat_img = self.imgs_data[bi.img_id + battery_id].unpack()
-                    mask = bat_img if bi.is_rgba else None
-                    img.paste(bat_img, (bi.pos_x, bi.pos_y), mask)
+                    strip_block_paste(img, bi, battery, 100)
             elif bi.blocktype == BlockType.Animation:
                 anim_layer_imgs = [self.imgs_data[bi.img_id + i].unpack() for i in range(bi.num_imgs)]
                 imgs = [imgs[0].copy() for _ in range(bi.num_imgs)]
