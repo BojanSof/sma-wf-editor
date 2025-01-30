@@ -52,6 +52,30 @@ class BlockType(IntEnum):
         return self.name
 
 
+class Weather(IntEnum):
+    Unknown = 0
+    Sunny = 1
+    PartlyCloudy = 2
+    Cloudy = 3
+    Rainy = 4
+    Thunders = 5
+    Thunderstorm = 6
+    Windy = 7
+    Snowy = 8
+    Haze = 9
+    Sandstorm = 10
+    HazySunshine = 11
+    SevereWind = 12
+    LightRain = 13
+    HeavyRain = 14
+    SevereLightning = 15
+    LightSnow = 16
+    HeavySnow = 17
+    RainyAndSnowy = 18
+    Tornado = 19
+    WindyAndSnowy = 20
+
+
 class BlockHorizontalAlignment(IntEnum):
     NotSpecified = 0
     Left = 9
@@ -591,7 +615,8 @@ class WatchFace:
         steps_goal=6000,
         distance_goal=5,
         calories_goal=300,
-        max_heart_rate=150
+        max_heart_rate=150,
+        weather=Weather.PartlyCloudy,
     ) -> list[Image.Image]:
         def digital_block_paste(
             img: Image.Image, block_info: BlockInfo, value: float, num_digits: int, pad_zeros: bool = True
@@ -630,7 +655,7 @@ class WatchFace:
             new_img = new_img.rotate(-angle, resample=Image.Resampling.BICUBIC, center=(new_center_x, new_center_y))
             new_mask = new_img if block_info.is_rgba else None
             img.paste(new_img, (0, 0), new_mask)
-        
+
         def strip_block_paste(img: Image.Image, block_info: BlockInfo, value: float, goal: float):
             id = min(block_info.num_imgs - 1, int(round((value // (goal / block_info.num_imgs)))))
             layer_img = self.imgs_data[block_info.img_id + id].unpack()
@@ -729,6 +754,11 @@ class WatchFace:
                 for i, anim_img in enumerate(anim_layer_imgs):
                     mask = anim_img if bi.is_rgba else None
                     imgs[i].paste(anim_img, (bi.pos_x, bi.pos_y), mask)
+            elif bi.blocktype == BlockType.Weather:
+                weather_img = self.imgs_data[bi.img_id + weather].unpack()
+                mask = weather_img if bi.is_rgba else None
+                for img in imgs:
+                    img.paste(weather_img, (bi.pos_x, bi.pos_y), mask)
             else:
                 # print(f"Can't use block type {bi.blocktype} for preview")
                 pass
