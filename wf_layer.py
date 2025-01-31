@@ -310,6 +310,7 @@ class WatchFaceLayer(QListWidgetItem):
         self.block_info.cent_y = self.rot_y_spinbox.value()
         self.block_info.compr = 0 if self.compression_combobox.currentIndex() == 0 else 4
         self.block_info.num_imgs = len(self.images)
+        self.block_info.is_rgba = self.rgba_checkbox.isChecked()
         if self.pixmap is not None:
             self.image_item.setPixmap(
                 self.pixmap.scaled(self.block_info.width, self.block_info.height, Qt.KeepAspectRatio)

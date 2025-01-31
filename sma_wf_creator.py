@@ -91,7 +91,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.scene.setSceneRect(0, 0, self.width, self.height)
         
     def add_layer(self):
-        block_info = BlockInfo(0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0, 0, 0)
+        block_info = BlockInfo(0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0x04, 0, 0)
         self.create_layer(block_info, [])
         if len(self.layer_items) > 0:
             self.gbParams.setEnabled(False)
@@ -154,6 +154,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         blocks_info = []
         imgs_data = []
         img_offset = 0
+        img_id = 0
         for layer in self.layer_items:
             bi = layer.block_info
             layer_images = layer.get_images()
@@ -161,7 +162,9 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
                 img_data = ImageData.pack(img, bi.compr)
                 imgs_data.append(img_data)
                 img_offset += len(bytes(img_data))
+            bi.img_id = img_id
             bi.img_offset = img_offset
+            img_id += len(layer_images)
             blocks_info.append(bi)
         imgs_size_info = [len(bytes(img_data)) for img_data in imgs_data]
         header = WatchFaceHeader(len(imgs_data), len(blocks_info), 2)
