@@ -246,6 +246,7 @@ class WatchFaceLayer(QListWidgetItem):
             self.width_spinbox.setValue(images[0].width)
             self.height_spinbox.setValue(images[0].height)
             self.rgba_checkbox.setChecked(images[0].mode == "RGBA")
+            self.num_images_lineedit.setText(str(len(self.images)))
             self.width_spinbox.blockSignals(False)
             self.height_spinbox.blockSignals(False)
             self.update_image_combobox()
