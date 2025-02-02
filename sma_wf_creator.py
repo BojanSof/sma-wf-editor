@@ -47,6 +47,8 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.btnAddLayer.clicked.connect(self.add_layer)
         self.btnRemoveLayer.clicked.connect(self.remove_layer)
         self.btnRemoveAllLayers.clicked.connect(self.remove_all_layers)
+        self.btnMoveLayerUp.clicked.connect(self.move_layer_up)
+        self.btnMoveLayerDown.clicked.connect(self.move_layer_down)
         self.actionLoadWf.triggered.connect(self.load_watch_face)
         self.actionSaveWf.triggered.connect(self.save_watch_face)
         self.actionExit.triggered.connect(self.close)
@@ -65,7 +67,7 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.scene.selectionChanged.connect(self.on_image_selection_changed)
 
         self.preview_dialog = PreviewDialog()
-    
+
     def change_device(self, dev_name):
         device = [dev for dev in self.devices if dev["name"] == dev_name][0]
         if device["name"] == "Custom Device":
@@ -84,12 +86,12 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.spinboxHeight.setValue(self.height)
         self.spinboxWidth.blockSignals(False)
         self.spinboxHeight.blockSignals(False)
-    
+
     def update_wf_editor(self):
         self.width = self.spinboxWidth.value()
         self.height = self.spinboxHeight.value()
         self.scene.setSceneRect(0, 0, self.width, self.height)
-        
+
     def add_layer(self):
         block_info = BlockInfo(0, 0, 0, 0, 0, 0, 0, False, BlockType.Preview, BlockHorizontalAlignment.Left, 0x04, 0, 0)
         self.create_layer(block_info, [])
@@ -115,6 +117,40 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.image_items.clear()
         self.scene.clear()
         self.gbParams.setEnabled(True)
+
+    def move_layer_up(self):
+        row = self.lwWfLayers.currentRow()
+        if row < 1:
+            return
+        self.lwWfLayers.blockSignals(True)
+        widget = self.lwWfLayers.itemWidget(self.lwWfLayers.currentItem())
+        item = self.lwWfLayers.currentItem().clone()
+        self.lwWfLayers.insertItem(row - 1, item)
+        self.lwWfLayers.setItemWidget(item, widget)
+        self.lwWfLayers.takeItem(row + 1)
+        self.lwWfLayers.setCurrentRow(row - 1)
+        self.lwWfLayers.blockSignals(False)
+        self.layer_items[row], self.layer_items[row - 1] = self.layer_items[row - 1], self.layer_items[row]
+        self.image_items[row], self.image_items[row - 1] = self.image_items[row - 1], self.image_items[row]
+        self.image_items[row - 1].stackBefore(self.image_items[row])
+        self.scene.update()
+
+    def move_layer_down(self):
+        row = self.lwWfLayers.currentRow()
+        if row == -1 or row == self.lwWfLayers.count() - 1:
+            return
+        self.lwWfLayers.blockSignals(True)
+        widget = self.lwWfLayers.itemWidget(self.lwWfLayers.currentItem())
+        item = self.lwWfLayers.currentItem().clone()
+        self.lwWfLayers.insertItem(row + 2, item)
+        self.lwWfLayers.setItemWidget(item, widget)
+        self.lwWfLayers.takeItem(row)
+        self.lwWfLayers.setCurrentRow(row + 1)
+        self.lwWfLayers.blockSignals(False)
+        self.layer_items[row], self.layer_items[row + 1] = self.layer_items[row + 1], self.layer_items[row]
+        self.image_items[row], self.image_items[row + 1] = self.image_items[row + 1], self.image_items[row]
+        self.image_items[row].stackBefore(self.image_items[row + 1])
+        self.scene.update()
 
     def create_layer(self, block_info, images):
         origin_x, origin_y = get_origin_point(block_info)

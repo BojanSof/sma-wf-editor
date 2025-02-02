@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(800, 600)
+        MainWindow.resize(860, 600)
         icon = QIcon()
         icon.addFile(u":/icon/resources/icon.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         MainWindow.setWindowIcon(icon)
@@ -76,6 +76,18 @@ class Ui_MainWindow(object):
         self.btnRemoveAllLayers.setObjectName(u"btnRemoveAllLayers")
 
         self.horizontalLayout.addWidget(self.btnRemoveAllLayers)
+
+        self.btnMoveLayerUp = QPushButton(self.gbLayers)
+        self.btnMoveLayerUp.setObjectName(u"btnMoveLayerUp")
+        self.btnMoveLayerUp.setMaximumSize(QSize(50, 16777215))
+
+        self.horizontalLayout.addWidget(self.btnMoveLayerUp)
+
+        self.btnMoveLayerDown = QPushButton(self.gbLayers)
+        self.btnMoveLayerDown.setObjectName(u"btnMoveLayerDown")
+        self.btnMoveLayerDown.setMaximumSize(QSize(50, 16777215))
+
+        self.horizontalLayout.addWidget(self.btnMoveLayerDown)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout)
@@ -136,10 +148,12 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.view)
 
+        self.horizontalLayout_2.setStretch(0, 1)
+        self.horizontalLayout_2.setStretch(1, 2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 33))
+        self.menubar.setGeometry(QRect(0, 0, 860, 33))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuTools = QMenu(self.menubar)
@@ -172,9 +186,11 @@ class Ui_MainWindow(object):
         self.actionPreview.setText(QCoreApplication.translate("MainWindow", u"Create Preview", None))
         self.actionSaveImages.setText(QCoreApplication.translate("MainWindow", u"Save all images", None))
         self.gbLayers.setTitle(QCoreApplication.translate("MainWindow", u"Layers", None))
-        self.btnAddLayer.setText(QCoreApplication.translate("MainWindow", u"+ Add Layer", None))
-        self.btnRemoveLayer.setText(QCoreApplication.translate("MainWindow", u"- Remove Layer", None))
-        self.btnRemoveAllLayers.setText(QCoreApplication.translate("MainWindow", u"Remove All Layers", None))
+        self.btnAddLayer.setText(QCoreApplication.translate("MainWindow", u"+ Add", None))
+        self.btnRemoveLayer.setText(QCoreApplication.translate("MainWindow", u"- Remove", None))
+        self.btnRemoveAllLayers.setText(QCoreApplication.translate("MainWindow", u"Remove All", None))
+        self.btnMoveLayerUp.setText(QCoreApplication.translate("MainWindow", u"Up", None))
+        self.btnMoveLayerDown.setText(QCoreApplication.translate("MainWindow", u"Down", None))
         self.gbParams.setTitle(QCoreApplication.translate("MainWindow", u"Parameters", None))
         self.lblDevice.setText(QCoreApplication.translate("MainWindow", u"Device", None))
         self.lblWidth.setText(QCoreApplication.translate("MainWindow", u"Width", None))

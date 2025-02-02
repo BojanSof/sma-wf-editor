@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>860</width>
     <height>600</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
     <normaloff>:/icon/resources/icon.png</normaloff>:/icon/resources/icon.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_2">
+   <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
@@ -35,21 +35,47 @@
            <item>
             <widget class="QPushButton" name="btnAddLayer">
              <property name="text">
-              <string>+ Add Layer</string>
+              <string>+ Add</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QPushButton" name="btnRemoveLayer">
              <property name="text">
-              <string>- Remove Layer</string>
+              <string>- Remove</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QPushButton" name="btnRemoveAllLayers">
              <property name="text">
-              <string>Remove All Layers</string>
+              <string>Remove All</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnMoveLayerUp">
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Up</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnMoveLayerDown">
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Down</string>
              </property>
             </widget>
            </item>
@@ -136,7 +162,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>860</width>
      <height>33</height>
     </rect>
    </property>
