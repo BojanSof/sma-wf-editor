@@ -38,6 +38,10 @@ class BlockType(IntEnum):
     Animation = 23
     BatteryStrip = 24
     Weather = 25
+    Temperature = 26
+    WeatherForecast = 27
+    TemperatureForecast = 28
+    WeatherDayForecast = 29
     StepsStrip = 30
     DistanceStrip = 31
     CaloriesStrip = 32
