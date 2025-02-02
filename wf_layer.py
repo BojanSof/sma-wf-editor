@@ -236,9 +236,7 @@ class WatchFaceLayer(QListWidgetItem):
             self.images.clear()
             images = [Image.open(file_name) for file_name in file_names]
             if not all(img.width == images[0].width and img.height == images[0].height for img in images):
-                QMessageBox.critical(
-                    self, "Image size mismatch", "All images must have the same width and height", QMessageBox.Ok
-                )
+                QMessageBox.critical(None, "Image size mismatch", "All images must have the same width and height")
                 return
             self.images = images
             self.width_spinbox.blockSignals(True)
@@ -274,7 +272,7 @@ class WatchFaceLayer(QListWidgetItem):
             self.width_spinbox.setValue(new_width)
             self.width_spinbox.blockSignals(False)
         self.update_info()
-    
+
     def update_origin(self):
         self.reverse_align_map = {v: k for k, v in self.align_map.items()}
         self.block_info.align = self.reverse_align_map[self.align_combobox.currentText()]

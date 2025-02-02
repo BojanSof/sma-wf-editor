@@ -83,7 +83,7 @@ class BlockHorizontalAlignment(IntEnum):
     Right = 12
 
 
-@dataclass
+@dataclass(frozen=True)
 class Header:
     num_img_info_size: int
     num_blocks: int
@@ -126,28 +126,21 @@ class BlockInfo:
     _struct = struct.Struct("<IHHHHHBBBBBB")
     size = _struct.size
 
-    def __post_init__(self):
-        object.__setattr__(
-            self,
-            "_bytes",
-            self._struct.pack(
-                self.img_offset,
-                self.img_id,
-                self.width,
-                self.height,
-                self.pos_x,
-                self.pos_y,
-                self.num_imgs,
-                self.is_rgba << 7 | self.blocktype,
-                self.align,
-                self.compr,
-                self.cent_y,
-                self.cent_x,
-            ),
-        )
-
     def __bytes__(self):
-        return self._bytes
+        return self._struct.pack(
+            self.img_offset,
+            self.img_id,
+            self.width,
+            self.height,
+            self.pos_x,
+            self.pos_y,
+            self.num_imgs,
+            self.is_rgba << 7 | self.blocktype,
+            self.align,
+            self.compr,
+            self.cent_y,
+            self.cent_x,
+        )
 
     @staticmethod
     def loads(data: bytes):
@@ -186,7 +179,10 @@ class BlockInfo:
         )
 
 
-@dataclass
+IMG_SIZE_INFO_SIZE = 4
+
+
+@dataclass(frozen=True)
 class WatchFaceMetaData:
     header: Header
     blocks_info: list[BlockInfo]
@@ -198,7 +194,7 @@ class WatchFaceMetaData:
             "_bytes",
             bytes(self.header)
             + b"".join([bytes(bi) for bi in self.blocks_info])
-            + b"".join([int.to_bytes(sz, 4, "little") for sz in self.imgs_size_info]),
+            + b"".join([int.to_bytes(sz, IMG_SIZE_INFO_SIZE, "little") for sz in self.imgs_size_info]),
         )
 
     def __bytes__(self):
@@ -225,7 +221,7 @@ class WatchFaceMetaData:
         return WatchFaceMetaData(header, block_info, img_size_info)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ImageCompressedLineInfo:
     line_offset: int
     line_size: int
@@ -250,7 +246,7 @@ class ImageCompressedLineInfo:
         return ImageCompressedLineInfo(line_offset, line_size)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ImageCompressedData:
     lines_info: list[ImageCompressedLineInfo]
     compressed_data: bytes
@@ -284,8 +280,7 @@ class ImageCompressedData:
         Compression type is 0x04.
         Image is compressed using line-based run-length encoding (RLE).
         Image data starts with info for each line, containing the offset
-        where the encoded line data lies, along with 1.5 bytes which
-        currently have unknown purpose.
+        where the encoded line data lies and length of the encoded line.
 
         The RLE is specified with prefix with the length of the repeating pixel
         values.
@@ -466,7 +461,7 @@ class ImageCompressedData:
         return ImageCompressedData(lines_info, compressed_data, width, height, is_rgba)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ImageData:
     data: bytes
     compression: int
@@ -566,7 +561,7 @@ class ImageData:
             return ImageCompressedData.compress(img)
 
 
-@dataclass
+@dataclass(frozen=True)
 class WatchFace:
     meta_data: WatchFaceMetaData
     imgs_data: list[ImageData]

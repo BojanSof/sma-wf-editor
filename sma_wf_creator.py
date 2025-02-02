@@ -97,6 +97,8 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         self.create_layer(block_info, [])
         if len(self.layer_items) > 0:
             self.gbParams.setEnabled(False)
+        self.select_layer(self.lwWfLayers.count() - 1)
+        self.on_layer_selection_changed()
 
     def remove_layer(self):
         selected_items = self.lwWfLayers.selectedItems()
@@ -174,9 +176,9 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         layer.update_info()
 
     def load_watch_face(self):
-        self.remove_all_layers()
         file_name, _ = QFileDialog.getOpenFileName(self, "Open Watch Face File", "", "Bin Files (*.bin)")
         if file_name:
+            self.remove_all_layers()
             with open(file_name, "rb") as f:
                 wf_data = f.read()
             watch_face = WatchFace.loads(wf_data)
@@ -193,18 +195,21 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
         img_id = 0
         for layer in self.layer_items:
             bi = layer.block_info
+            bi.img_offset = img_offset
+            bi.img_id = img_id
             layer_images = layer.get_images()
             for img in layer_images:
                 img_data = ImageData.pack(img, bi.compr)
                 imgs_data.append(img_data)
                 img_offset += len(bytes(img_data))
-            bi.img_id = img_id
-            bi.img_offset = img_offset
             img_id += len(layer_images)
             blocks_info.append(bi)
         imgs_size_info = [len(bytes(img_data)) for img_data in imgs_data]
         header = WatchFaceHeader(len(imgs_data), len(blocks_info), 2)
+        # adjust img offsets
         metadata = WatchFaceMetaData(header, blocks_info, imgs_size_info)
+        for bi in blocks_info:
+            bi.img_offset += len(bytes(metadata))
         return WatchFace(metadata, imgs_data)
 
     def save_watch_face(self):
@@ -241,12 +246,14 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
     def on_image_selection_changed(self):
         selected_items = self.scene.selectedItems()
         selected_indices = [self.image_items.index(item) for item in selected_items if item in self.image_items]
-
+        for index in selected_indices:
+            self.select_layer(index)
+    
+    def select_layer(self, index):
         self.lwWfLayers.blockSignals(True)
         self.lwWfLayers.clearSelection()
-        for index in selected_indices:
-            self.lwWfLayers.item(index).setSelected(True)
-            self.lwWfLayers.scrollToItem(self.lwWfLayers.item(index))
+        self.lwWfLayers.item(index).setSelected(True)
+        self.lwWfLayers.scrollToItem(self.lwWfLayers.item(index))
         self.lwWfLayers.blockSignals(False)
 
 
