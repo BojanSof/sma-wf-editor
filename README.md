@@ -85,4 +85,5 @@ The directory `watch_face` contains watch faces obtained from the app, but also 
 | Preview | Device | File |
 | :-----: |  :--:  | :--: |
 | ![](watch_faces/10011_blue/000.png) | Trevi T-Fit 400 C | [10011_blue.bin](watch_faces/10011_blue.bin)
+| ![](watch_faces/robot/preview.png) | Trevi T-Fit 400 C | [robot.bin](watch_faces/robot.bin)
 

@@ -182,23 +182,18 @@ class BlockInfo:
 IMG_SIZE_INFO_SIZE = 4
 
 
-@dataclass(frozen=True)
+@dataclass
 class WatchFaceMetaData:
     header: Header
     blocks_info: list[BlockInfo]
     imgs_size_info: list[int]
 
-    def __post_init__(self):
-        object.__setattr__(
-            self,
-            "_bytes",
+    def __bytes__(self):
+        return (
             bytes(self.header)
             + b"".join([bytes(bi) for bi in self.blocks_info])
-            + b"".join([int.to_bytes(sz, IMG_SIZE_INFO_SIZE, "little") for sz in self.imgs_size_info]),
+            + b"".join([int.to_bytes(sz, IMG_SIZE_INFO_SIZE, "little") for sz in self.imgs_size_info])
         )
-
-    def __bytes__(self):
-        return self._bytes
 
     @staticmethod
     def loads(data: bytes):

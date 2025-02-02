@@ -246,8 +246,12 @@ class SmaWfCreator(QMainWindow, SmaWfCreatorWindow):
     def on_image_selection_changed(self):
         selected_items = self.scene.selectedItems()
         selected_indices = [self.image_items.index(item) for item in selected_items if item in self.image_items]
+        self.lwWfLayers.blockSignals(True)
+        self.lwWfLayers.clearSelection()
         for index in selected_indices:
-            self.select_layer(index)
+            self.lwWfLayers.item(index).setSelected(True)
+            self.lwWfLayers.scrollToItem(self.lwWfLayers.item(index))
+        self.lwWfLayers.blockSignals(False)
     
     def select_layer(self, index):
         self.lwWfLayers.blockSignals(True)
