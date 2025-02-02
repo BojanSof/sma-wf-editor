@@ -36,13 +36,14 @@ class BlockType(IntEnum):
     Distance = 17
     BackgroundPiece = 22
     Animation = 23
-    Battery = 24
+    BatteryStrip = 24
     Weather = 25
     StepsStrip = 30
     DistanceStrip = 31
     CaloriesStrip = 32
     HeartRateStrip = 33
     DistanceLabel = 37
+    Battery = 38
     HoursDigitTens = 39
     HoursDigitOnes = 40
     MinutesDigitTens = 41
@@ -736,6 +737,9 @@ class WatchFace:
                 for img in imgs:
                     strip_block_paste(img, bi, heart_rate, max_heart_rate)
             elif bi.blocktype == BlockType.Battery:
+                for img in imgs:
+                    digital_block_paste(img, bi, battery, 3, False)
+            elif bi.blocktype == BlockType.BatteryStrip:
                 for img in imgs:
                     strip_block_paste(img, bi, battery, 100)
             elif bi.blocktype == BlockType.Animation:
